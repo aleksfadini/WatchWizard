@@ -157,6 +157,23 @@ class GameData: ObservableObject {
     @Published var runStartTime: Date?
     @Published var leveledUpDuringLastRun: Bool = false
     @Published var lastUpdateTime: Date
+    @Published var lastLevelUp: Int?
+    @Published var passiveXPGained: Int = 0
+    @Published var passiveGoldGained: Int = 0
+    @Published var showPassiveGainAlert = false
+    @Published var showLevelUpAlert = false
+    
+    
+    init() {
+        self.wizard = Wizard(name: "Merlin", level: 1, xp: 0, gold: 0, spells: [availableSpells[0]], inventory: [])
+        self.completedRuns = []
+        self.lastUpdateTime = Date()
+        
+        if extraMoney {
+            self.wizard.gold = 1000
+        }
+    }
+
 
     var totalSuccessChanceBonus: Double {
          wizard.spells.reduce(0) { $0 + $1.successChanceBonus }
@@ -173,16 +190,6 @@ class GameData: ObservableObject {
                 // For levels beyond our defined array, we'll use a formula
                 return Int(Double(levelUpXPRequirements.last!) * pow(1.2, Double(currentLevel - levelUpXPRequirements.count)))
             }
-        }
-    }
-    
-    init() {
-        self.wizard = Wizard(name: "Merlin", level: 1, xp: 0, gold: 0, spells: [availableSpells[0]], inventory: [])
-        self.completedRuns = []
-        self.lastUpdateTime = Date()
-        
-        if extraMoney {
-            self.wizard.gold = 1000
         }
     }
 
@@ -227,7 +234,7 @@ class GameData: ObservableObject {
           completedRuns.append(run)
           currentRun = nil
           
-          checkLevelUp()
+          checkAndHandleLevelUp()
           runStartTime = nil
           saveGame()
       }
@@ -275,6 +282,16 @@ class GameData: ObservableObject {
         leveledUpDuringLastRun = didLevelUp
     }
     
+    
+    func checkAndHandleLevelUp() {
+        let oldLevel = wizard.level
+        checkLevelUp()
+        if wizard.level > oldLevel {
+            lastLevelUp = wizard.level
+            showLevelUpAlert = true
+        }
+    }
+    
     func purchaseSpell(_ spell: Spell) {
         if wizard.gold >= spell.goldCost && wizard.level >= spell.requiredLevel {
             wizard.gold -= spell.goldCost
@@ -301,20 +318,25 @@ class GameData: ObservableObject {
      }
     
     func updatePassiveGains() {
-        let now = Date()
-        let elapsedHours = now.timeIntervalSince(lastUpdateTime) / 3600
+           let now = Date()
+           let elapsedHours = now.timeIntervalSince(lastUpdateTime) / 3600
+           
+           passiveXPGained = Int(wizard.xpPerHour * elapsedHours)
+           passiveGoldGained = Int(wizard.goldPerHour * elapsedHours)
+           
+           wizard.xp += passiveXPGained
+           wizard.gold += passiveGoldGained
+           
+           lastUpdateTime = now
         
-        let xpGained = Int(wizard.xpPerHour * elapsedHours)
-        let goldGained = Int(wizard.goldPerHour * elapsedHours)
-        
-        wizard.xp += xpGained
-        wizard.gold += goldGained
-        
-        lastUpdateTime = now
-        
-        checkLevelUp()
-        saveGame()
-    }
+        if passiveXPGained > 0 || passiveGoldGained > 0 {
+            showPassiveGainAlert = true
+        } else {
+            showPassiveGainAlert = false
+        }
+           checkAndHandleLevelUp()
+           saveGame()
+       }
     
 //
 //  MARK: Save Game
@@ -554,16 +576,33 @@ struct ContentView: View {
                     HistoryView()
                 }
                 .environmentObject(gameData)
-                .withTextShadow()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: WKExtension.applicationDidBecomeActiveNotification)) { _ in
-            gameData.updatePassiveGains()
-        }
-        .environment(\.font, Font.custom("Lancelot", size: 16))
-    }
-}
-
+                .alert("Hark! Thou hast ascended!", isPresented: $gameData.showLevelUpAlert) {
+                                  Button("View Character Sheet") {
+                                      // Add navigation to character sheet if needed
+                                  }
+                              } message: {
+                                  Text("Thy prowess has grown. Thou art now level \(gameData.lastLevelUp ?? 0)!")
+                              }
+                              .alert("Whilst thou rested...", isPresented: $gameData.showPassiveGainAlert) {
+                                  Button("Splendid!") {
+                                      gameData.passiveXPGained = 0
+                                      gameData.passiveGoldGained = 0
+                                  }
+                              } message: {
+                                  Text("Thy coffers have grown by \(gameData.passiveGoldGained)🟡 and thy knowledge by \(gameData.passiveXPGained) XP.")
+                              }
+                              .onAppear {
+                                  gameData.updatePassiveGains()
+                              }
+                          }
+                      }
+                      .onReceive(NotificationCenter.default.publisher(for: WKExtension.applicationDidBecomeActiveNotification)) { _ in
+                          gameData.updatePassiveGains()
+                      }
+                      .withTextShadow()
+//                      .environment(\.font, Font.custom("Lancelot", size: 16))
+                  }
+              }
 // MARK: Splash
 
 struct SplashView: View {
@@ -1064,7 +1103,11 @@ struct SpellShopView: View {
     @State private var selectedSpell: Spell?
 
     var availableSpellsForPurchase: [Spell] {
-        availableSpells.filter { $0.name != "Enchanted Dart" && $0.requiredLevel <= gameData.wizard.level }
+        availableSpells.filter { spell in
+            spell.name != "Enchanted Dart" &&
+            spell.requiredLevel <= gameData.wizard.level &&
+            !gameData.wizard.spells.contains(where: { $0.name == spell.name })
+        }
     }
     
     var nextAvailableSpell: Spell? {
