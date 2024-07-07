@@ -139,8 +139,8 @@ enum ItemType {
 class GameData: ObservableObject {
     // Dev Vars
     @Published var isTestMode: Bool = true
-    @Published var easyXP: Bool = true
-    @Published var extraMoney: Bool = true
+    @Published var easyXP: Bool = false
+    @Published var extraMoney: Bool = false
     // Script Vars
     @Published var wizard: Wizard
 //    @Published var purchasedSpells: [Spell] = []
@@ -242,21 +242,11 @@ class GameData: ObservableObject {
     func checkLevelUp() {
         var didLevelUp = false
         while wizard.xp >= xpNeededForLevelUp {
-            wizard.xp -= xpNeededForLevelUp
             wizard.level += 1
-//            learnNewSpell()
             didLevelUp = true
         }
         leveledUpDuringLastRun = didLevelUp
     }
-    
-//    func learnNewSpell() {
-//        for spell in purchasedSpells {
-//            if spell.requiredLevel == wizard.level && !wizard.spells.contains(where: { $0.id == spell.id }) {
-//                wizard.spells.append(spell)
-//            }
-//        }
-//    }
     
     func purchaseSpell(_ spell: Spell) {
         if wizard.gold >= spell.goldCost && wizard.level >= spell.requiredLevel {
@@ -591,7 +581,7 @@ struct WizardView: View {
                         .withBoldShadow()
                     Text("Level: \(gameData.wizard.level)")
                         .withTextShadow()
-                    Text("XP: \(gameData.wizard.xp)")
+                    Text("XP: \(gameData.wizard.xp)/\(gameData.xpNeededForLevelUp)")
                         .withTextShadow()
                     Text("XP per hour: \(String(format: "%.1f", gameData.wizard.xpPerHour))")
                         .withTextShadow()
