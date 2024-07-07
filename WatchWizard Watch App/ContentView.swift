@@ -11,7 +11,7 @@ import Foundation
 
 // MARK: - Data Structures
 
-class Wizard: ObservableObject, Equatable {
+class Wizard: ObservableObject, Equatable, Codable {
     @Published var name: String
     @Published var level: Int
     @Published var xp: Int
@@ -21,6 +21,9 @@ class Wizard: ObservableObject, Equatable {
     @Published var xpPerHour: Double = 0
     @Published var goldPerHour: Double = 0
     
+    enum CodingKeys: String, CodingKey {
+        case name, level, xp, gold, spells, inventory, xpPerHour, goldPerHour
+    }
     init(name: String, level: Int, xp: Int, gold: Int, spells: [Spell], inventory: [Item]) {
         self.name = name
         self.level = level
@@ -29,13 +32,36 @@ class Wizard: ObservableObject, Equatable {
         self.spells = spells
         self.inventory = inventory
     }
+    required init(from decoder: Decoder) throws {
+           let container = try decoder.container(keyedBy: CodingKeys.self)
+           name = try container.decode(String.self, forKey: .name)
+           level = try container.decode(Int.self, forKey: .level)
+           xp = try container.decode(Int.self, forKey: .xp)
+           gold = try container.decode(Int.self, forKey: .gold)
+           spells = try container.decode([Spell].self, forKey: .spells)
+           inventory = try container.decode([Item].self, forKey: .inventory)
+           xpPerHour = try container.decode(Double.self, forKey: .xpPerHour)
+           goldPerHour = try container.decode(Double.self, forKey: .goldPerHour)
+       }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(level, forKey: .level)
+        try container.encode(xp, forKey: .xp)
+        try container.encode(gold, forKey: .gold)
+        try container.encode(spells, forKey: .spells)
+        try container.encode(inventory, forKey: .inventory)
+        try container.encode(xpPerHour, forKey: .xpPerHour)
+        try container.encode(goldPerHour, forKey: .goldPerHour)
+    }
     
     static func == (lhs: Wizard, rhs: Wizard) -> Bool {
         return lhs.name == rhs.name && lhs.level == rhs.level && lhs.xp == rhs.xp &&
                lhs.gold == rhs.gold && lhs.spells == rhs.spells && lhs.inventory == rhs.inventory
     }
 }
-struct Spell: Identifiable, Equatable {
+struct Spell: Identifiable, Equatable, Codable {
     let id = UUID()
     var name: String
     var description: String
@@ -46,12 +72,17 @@ struct Spell: Identifiable, Equatable {
     var xpPerHour: Double = 0
     var goldPerHour: Double = 0
     
+    enum CodingKeys: String, CodingKey {
+        case name, description, effect, requiredLevel, goldCost, successChanceBonus, xpPerHour, goldPerHour
+        // Note: 'id' is not included here
+    }
+    
     static func == (lhs: Spell, rhs: Spell) -> Bool {
         return lhs.id == rhs.id
     }
 }
 
-struct Item: Equatable {
+struct Item: Equatable, Codable {
     var name: String
     var quantity: Int
     
@@ -191,6 +222,7 @@ class GameData: ObservableObject {
           
           checkLevelUp()
           runStartTime = nil
+          saveGame()
       }
 
     func generateItems(for location: Location) -> [Item] {
@@ -232,6 +264,7 @@ class GameData: ObservableObject {
             wizard.spells.append(spell)
             wizard.xpPerHour += spell.xpPerHour
             wizard.goldPerHour += spell.goldPerHour
+        saveGame()
         }
     }
     
@@ -263,28 +296,29 @@ class GameData: ObservableObject {
         lastUpdateTime = now
         
         checkLevelUp()
+        saveGame()
     }
     
 //
-//    WIP Encodable issue
+//  MARK: Save Game
 //
-//    func saveGame() {
-//        let encoder = JSONEncoder()
-//        if let encoded = try? encoder.encode(wizard) {
-//            UserDefaults.standard.set(encoded, forKey: "SavedWizard")
-//        }
-//        UserDefaults.standard.set(lastUpdateTime, forKey: "LastUpdateTime")
-//    }
-//
-//    func loadGame() {
-//        if let savedWizard = UserDefaults.standard.data(forKey: "SavedWizard") {
-//            let decoder = JSONDecoder()
-//            if let loadedWizard = try? decoder.decode(Wizard.self, from: savedWizard) {
-//                wizard = loadedWizard
-//            }
-//        }
-//        lastUpdateTime = UserDefaults.standard.object(forKey: "LastUpdateTime") as? Date ?? Date()
-//    }
+    func saveGame() {
+        let encoder = JSONEncoder()
+        if let encoded = try? encoder.encode(wizard) {
+            UserDefaults.standard.set(encoded, forKey: "SavedWizard")
+        }
+        UserDefaults.standard.set(lastUpdateTime, forKey: "LastUpdateTime")
+    }
+
+    func loadGame() {
+        if let savedWizard = UserDefaults.standard.data(forKey: "SavedWizard") {
+            let decoder = JSONDecoder()
+            if let loadedWizard = try? decoder.decode(Wizard.self, from: savedWizard) {
+                wizard = loadedWizard
+            }
+        }
+        lastUpdateTime = UserDefaults.standard.object(forKey: "LastUpdateTime") as? Date ?? Date()
+    }
     
     
 }
@@ -482,6 +516,7 @@ struct ContentView: View {
                         }
                     }
                     .onAppear {
+                        gameData.loadGame()
                         // Delay the start of automatic fade-out
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                             withAnimation(.easeOut(duration: 1.0)) {
@@ -1064,6 +1099,7 @@ struct GoldToXPConversionView: View {
             gameData.wizard.gold -= amountToConvert
             gameData.wizard.xp += amountToConvert * conversionRate
             gameData.checkLevelUp()
+        gameData.saveGame()
         }
     }
 }
