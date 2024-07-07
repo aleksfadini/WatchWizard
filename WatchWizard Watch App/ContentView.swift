@@ -223,6 +223,7 @@ class GameData: ObservableObject {
           wizard.xp += run.xpGained
           wizard.gold += run.goldGained
           wizard.inventory.append(contentsOf: run.itemsGained)
+          consolidateAndSortInventory()
           completedRuns.append(run)
           currentRun = nil
           
@@ -244,6 +245,26 @@ class GameData: ObservableObject {
         
         return items
     }
+    
+    
+    func consolidateAndSortInventory() {
+            var consolidatedItems: [String: Int] = [:]
+            
+            // Consolidate items
+            for item in wizard.inventory {
+                consolidatedItems[item.name, default: 0] += item.quantity
+            }
+            
+            // Create new inventory array and sort by gold value
+            wizard.inventory = consolidatedItems.map { Item(name: $0.key, quantity: $0.value) }
+                .sorted { item1, item2 in
+                    let value1 = treasureList.first(where: { $0.name == item1.name })?.goldValue ?? 0
+                    let value2 = treasureList.first(where: { $0.name == item2.name })?.goldValue ?? 0
+                    return value1 > value2
+                }
+            
+            saveGame()
+        }
     
     func checkLevelUp() {
         var didLevelUp = false
@@ -958,11 +979,15 @@ struct InventoryView: View {
                     get: { selectedItem != nil },
                     set: { if !$0 { selectedItem = nil } }
                 ))
+            .onAppear {
+                    gameData.consolidateAndSortInventory()}
             }
             .alert(isPresented: $showingSellAllConfirmation) {
                 sellAllConfirmationAlert
             }
+
         }
+
     }
 
     var sellAllConfirmationAlert: Alert {
