@@ -82,12 +82,18 @@ struct Spell: Identifiable, Equatable, Codable {
     }
 }
 
-struct Item: Equatable, Codable {
+struct Item: Identifiable, Equatable, Codable {
+    let id = UUID()
     var name: String
     var quantity: Int
     
+    enum CodingKeys: String, CodingKey {
+        case name, quantity
+        // Note: 'id' is not included here
+    }
+    
     static func == (lhs: Item, rhs: Item) -> Bool {
-        return lhs.name == rhs.name && lhs.quantity == rhs.quantity
+        return lhs.id == rhs.id && lhs.name == rhs.name && lhs.quantity == rhs.quantity
     }
 }
 
@@ -907,11 +913,13 @@ struct RunSummaryView: View {
 
 struct InventoryView: View {
     @EnvironmentObject var gameData: GameData
-    
+    @State private var selectedItem: Item?
+    @State private var showingSellAllConfirmation = false
+
     var body: some View {
         NavigationView {
             List {
-                Section() {
+                Section {
                     HStack {
                         Image(systemName: "coins")
                             .foregroundColor(.yellow)
@@ -921,23 +929,108 @@ struct InventoryView: View {
                             .fontWeight(.bold).foregroundColor(.yellow)
                     }
                 }
-                
-                Section(header: Text("Items")) {
+
+                Section(header: Text("Trade")) {
+                    Button("Sell All Items") {
+                        showingSellAllConfirmation = true
+                    }
+                    .foregroundColor(.blue)
+                }
+
+                Section(header: Text("Sell Items")) {
                     ForEach(gameData.wizard.inventory, id: \.name) { item in
-                        HStack {
-                            Text(item.name)
-                            Spacer()
-                            Text("x\(item.quantity)")
+                        Button(action: {
+                            selectedItem = item
+                        }) {
+                            HStack {
+                                Text(item.name)
+                                Spacer()
+                                Text("x\(item.quantity)")
+                            }
                         }
                     }
                 }
             }
             .navigationTitle("Adventurer's Satchel")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(item: $selectedItem) { item in
+                SellItemView(item: item, gameData: gameData, isPresented: Binding(
+                    get: { selectedItem != nil },
+                    set: { if !$0 { selectedItem = nil } }
+                ))
+            }
+            .alert(isPresented: $showingSellAllConfirmation) {
+                sellAllConfirmationAlert
+            }
         }
+    }
+
+    var sellAllConfirmationAlert: Alert {
+        let totalGold = gameData.wizard.inventory.reduce(0) { sum, item in
+            sum + (item.quantity * (treasureList.first(where: { $0.name == item.name })?.goldValue ?? 0))
+        }
+        return Alert(
+            title: Text("Sell All Items?"),
+            message: Text("You will receive \(totalGold)🟡"),
+            primaryButton: .default(Text("Sell All")) {
+                sellAllItems()
+            },
+            secondaryButton: .cancel()
+        )
+    }
+
+    func sellAllItems() {
+        for item in gameData.wizard.inventory {
+            if let treasure = treasureList.first(where: { $0.name == item.name }) {
+                let goldValue = item.quantity * treasure.goldValue
+                gameData.wizard.gold += goldValue
+            }
+        }
+        gameData.wizard.inventory.removeAll()
+        gameData.saveGame()
     }
 }
 
+struct SellItemView: View {
+    let item: Item
+    @ObservedObject var gameData: GameData
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Sell \(item.name)?")
+                .font(.headline)
+            Text("Quantity: \(item.quantity)")
+            Text("You will receive \(sellValue)🟡")
+            
+            HStack(spacing: 20) {
+                Button("Cancel") {
+                    isPresented = false
+                }
+                .buttonStyle(BorderedButtonStyle(tint: .red))
+                
+                Button("Sell") {
+                    sellItem()
+                    isPresented = false
+                }
+                .buttonStyle(BorderedButtonStyle(tint: .blue))
+            }
+        }
+        .padding()
+    }
+    
+    var sellValue: Int {
+        item.quantity * (treasureList.first(where: { $0.name == item.name })?.goldValue ?? 0)
+    }
+    
+    func sellItem() {
+        if let index = gameData.wizard.inventory.firstIndex(where: { $0.name == item.name }) {
+            gameData.wizard.gold += sellValue
+            gameData.wizard.inventory.remove(at: index)
+            gameData.saveGame()
+        }
+    }
+}
 // MARK: - SpellShop View
 
 struct SpellShopView: View {
