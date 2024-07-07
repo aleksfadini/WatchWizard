@@ -12,8 +12,8 @@ ORANGE_D='\033[38;2;255;90;0m'    # Dark Orange
 ORANGE_VD='\033[38;2;255;69;0m'   # Very Dark Orange
 NC='\033[0m' # No Color
 
-printf "\n\n${BLUE}Welcome to the automated Aleks Multi Platform Git Commit With ToDoList Script${NC}\n"
-printf "${BLUE}(Also known as AMPGCWTS, a memorable acronym)${NC}\n\n"
+printf "\n\n${BLUE}Welcome to the automated Aleks Git Commit Script${NC}\n"
+printf "${BLUE}(Also known as AGCS, a memorable acronym)${NC}\n\n"
 
 # Check if a commit message was provided as an argument
 if [ $# -gt 0 ]; then
