@@ -1,14 +1,14 @@
 //
-//  WatchIdleWizard_Watch_AppTests.swift
-//  WatchIdleWizard Watch AppTests
+//  WatchWizard_Watch_AppTests.swift
+//  WatchWizard Watch AppTests
 //
 //  Created by Alessandro Fadini on 7/5/24.
 //
 
 import XCTest
-@testable import WatchIdleWizard_Watch_App
+@testable import WatchWizard_Watch_App
 
-final class WatchIdleWizard_Watch_AppTests: XCTestCase {
+final class WatchWizard_Watch_AppTests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

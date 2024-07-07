@@ -1,13 +1,13 @@
 //
-//  WatchIdleWizard_Watch_AppUITestsLaunchTests.swift
-//  WatchIdleWizard Watch AppUITests
+//  WatchWizard_Watch_AppUITestsLaunchTests.swift
+//  WatchWizard Watch AppUITests
 //
 //  Created by Alessandro Fadini on 7/5/24.
 //
 
 import XCTest
 
-final class WatchIdleWizard_Watch_AppUITestsLaunchTests: XCTestCase {
+final class WatchWizard_Watch_AppUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  WatchIdleWizard Watch App
+//  WatchWizard Watch App
 //
 //  Created by Alessandro Fadini on 7/5/24.
 //
