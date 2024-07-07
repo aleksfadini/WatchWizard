@@ -145,8 +145,8 @@ enum ItemType {
 class GameData: ObservableObject {
     // Dev Vars
     @Published var isTestMode: Bool = true
-    @Published var easyXP: Bool = false
-    @Published var extraMoney: Bool = false
+    @Published var easyXP: Bool = true
+    @Published var extraMoney: Bool = true
     // Script Vars
     @Published var wizard: Wizard
 //    @Published var purchasedSpells: [Spell] = []
@@ -160,7 +160,7 @@ class GameData: ObservableObject {
     @Published var lastLevelUp: Int?
     @Published var passiveXPGained: Int = 0
     @Published var passiveGoldGained: Int = 0
-    @Published var showPassiveGainAlert = false
+//    @Published var showPassiveGainAlert = false
     @Published var showLevelUpAlert = false
     
     
@@ -170,7 +170,7 @@ class GameData: ObservableObject {
         self.lastUpdateTime = Date()
         
         if extraMoney {
-            self.wizard.gold = 1000
+            self.wizard.gold = 100000
         }
     }
 
@@ -181,7 +181,7 @@ class GameData: ObservableObject {
     
     var xpNeededForLevelUp: Int {
         if easyXP {
-            return 5 // in easyXP mode, only 5 xp per level
+            return 200 // in easyXP mode, only 5 xp per level
         } else {
             let currentLevel = wizard.level
             if currentLevel <= levelUpXPRequirements.count {
@@ -318,25 +318,41 @@ class GameData: ObservableObject {
      }
     
     func updatePassiveGains() {
-           let now = Date()
-           let elapsedHours = now.timeIntervalSince(lastUpdateTime) / 3600
-           
-           passiveXPGained = Int(wizard.xpPerHour * elapsedHours)
-           passiveGoldGained = Int(wizard.goldPerHour * elapsedHours)
-           
-           wizard.xp += passiveXPGained
-           wizard.gold += passiveGoldGained
-           
-           lastUpdateTime = now
+        let now = Date()
+        let elapsedHours = now.timeIntervalSince(lastUpdateTime) / 3600
         
-        if passiveXPGained > 0 || passiveGoldGained > 0 {
-            showPassiveGainAlert = true
-        } else {
-            showPassiveGainAlert = false
-        }
-           checkAndHandleLevelUp()
-           saveGame()
-       }
+        passiveXPGained = Int(wizard.xpPerHour * elapsedHours)
+        passiveGoldGained = Int(wizard.goldPerHour * elapsedHours)
+        
+        wizard.xp += passiveXPGained
+        wizard.gold += passiveGoldGained
+        
+        lastUpdateTime = now
+        
+        checkAndHandleLevelUp()
+        saveGame()
+    }
+//
+//    func updatePassiveGains() {
+//           let now = Date()
+//           let elapsedHours = now.timeIntervalSince(lastUpdateTime) / 3600
+//           
+//           passiveXPGained = Int(wizard.xpPerHour * elapsedHours)
+//           passiveGoldGained = Int(wizard.goldPerHour * elapsedHours)
+//           
+//           wizard.xp += passiveXPGained
+//           wizard.gold += passiveGoldGained
+//           
+//           lastUpdateTime = now
+//        
+//        if passiveXPGained > 0 || passiveGoldGained > 0 {
+//            showPassiveGainAlert = true
+//        } else {
+//            showPassiveGainAlert = false
+//        }
+//           checkAndHandleLevelUp()
+//           saveGame()
+//       }
     
 //
 //  MARK: Save Game
@@ -420,7 +436,7 @@ let availableSpells = [
     Spell(name: "Enchanted Dart", description: "A simple but effective spell.", effect: "No additional effects", requiredLevel: 1, goldCost: 0, successChanceBonus: 0),
     Spell(name: "Magic Missile", description: "You will succeed better with stronger attack.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 1, goldCost: 50, successChanceBonus: 0.02),
     Spell(name: "Curse", description: "Powerful chant that distracts your enemies.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 2, goldCost: 150, successChanceBonus: 0.02),
-    Spell(name: "Summon Familiar", description: "Call forth a magical companion.", effect: "Accumulates 1 XP every 5 minutes, even when not in a run", requiredLevel: 3, goldCost: 400, successChanceBonus: 0, xpPerHour: 12),
+    Spell(name: "Summon Familiar", description: "Call forth a magical companion.", effect: "Accumulates 1 XP every 5 minutes, even when not in a run", requiredLevel: 3, goldCost: 400, successChanceBonus: 0, xpPerHour: 30000),
     Spell(name: "Invisible Hound", description: "This hound is tiny, but will go find treasures for you.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 4, goldCost: 1000, successChanceBonus: 0, goldPerHour: 6),
     Spell(name: "Levitating Shield", description: "This shield follows you and carries loot.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 5, goldCost: 1500, successChanceBonus: 0, goldPerHour: 6),
     Spell(name: "Fireball", description: "Engulf your enemies in flames", effect: "Increases XP gain by 5% for each run", requiredLevel: 6, goldCost: 2500, successChanceBonus: 0.05),
@@ -534,11 +550,12 @@ extension View {
 }
 
 // MARK: - Views
-
 struct ContentView: View {
     @StateObject private var gameData = GameData()
     @State private var showSplash = true
     @State private var splashOpacity: Double = 1.0
+    @State private var currentAlert: AlertItem?
+    @State private var alertQueue: [AlertItem] = []
 
     var body: some View {
         ZStack {
@@ -547,62 +564,101 @@ struct ContentView: View {
                     .opacity(splashOpacity)
                     .onTapGesture {
                         WKInterfaceDevice.current().play(.click)
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            splashOpacity = 0
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            showSplash = false
-                        }
+                        endSplash()
                     }
                     .onAppear {
                         gameData.loadGame()
-                        // Delay the start of automatic fade-out
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation(.easeOut(duration: 1.0)) {
-                                splashOpacity = 0
-                            }
-                        }
-                        // Remove splash view from the hierarchy after fade-out
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            showSplash = false
+                            endSplash()
                         }
                     }
             } else {
-                TabView {
-                    WizardView()
-                    RunView()
-                    InventoryView()
-                    SpellShopView()
-                    HistoryView()
+                mainContent
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: WKExtension.applicationDidBecomeActiveNotification)) { _ in
+            updatePassiveGains()
+        }
+        .withTextShadow()
+        .alert(item: $currentAlert) { alert in
+            createAlert(for: alert)
+        }
+    }
+
+    var mainContent: some View {
+        TabView {
+            WizardView()
+            RunView()
+            InventoryView()
+            SpellShopView()
+            HistoryView()
+        }
+        .environmentObject(gameData)
+        .withTextShadow()
+        .onAppear {
+            updatePassiveGains()
+        }
+    }
+
+    private func endSplash() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            splashOpacity = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            showSplash = false
+        }
+    }
+
+    private func updatePassiveGains() {
+        gameData.updatePassiveGains()
+        checkForAlerts()
+    }
+
+    private func checkForAlerts() {
+        if gameData.showLevelUpAlert {
+            alertQueue.append(.levelUp)
+            gameData.showLevelUpAlert = false
+        }
+        if gameData.passiveXPGained > 0 || gameData.passiveGoldGained > 0 {
+            alertQueue.append(.passiveGains)
+        }
+        showNextAlert()
+    }
+
+    private func showNextAlert() {
+        guard currentAlert == nil, !alertQueue.isEmpty else { return }
+        currentAlert = alertQueue.removeFirst()
+    }
+
+    private func createAlert(for alert: AlertItem) -> Alert {
+        switch alert {
+        case .levelUp:
+            return Alert(
+                title: Text("Hark! Thou hast ascended!"),
+                message: Text("Thy prowess has grown. Thou art now level \(gameData.lastLevelUp ?? 0)!"),
+                dismissButton: .default(Text("View Character Sheet")) {
+                    // Add navigation to character sheet if needed
+                    showNextAlert()
                 }
-                .environmentObject(gameData)
-                .alert("Hark! Thou hast ascended!", isPresented: $gameData.showLevelUpAlert) {
-                                  Button("View Character Sheet") {
-                                      // Add navigation to character sheet if needed
-                                  }
-                              } message: {
-                                  Text("Thy prowess has grown. Thou art now level \(gameData.lastLevelUp ?? 0)!")
-                              }
-                              .alert("Whilst thou rested...", isPresented: $gameData.showPassiveGainAlert) {
-                                  Button("Splendid!") {
-                                      gameData.passiveXPGained = 0
-                                      gameData.passiveGoldGained = 0
-                                  }
-                              } message: {
-                                  Text("Thy coffers have grown by \(gameData.passiveGoldGained)🟡 and thy knowledge by \(gameData.passiveXPGained) XP.")
-                              }
-                              .onAppear {
-                                  gameData.updatePassiveGains()
-                              }
-                          }
-                      }
-                      .onReceive(NotificationCenter.default.publisher(for: WKExtension.applicationDidBecomeActiveNotification)) { _ in
-                          gameData.updatePassiveGains()
-                      }
-                      .withTextShadow()
-//                      .environment(\.font, Font.custom("Lancelot", size: 16))
-                  }
-              }
+            )
+        case .passiveGains:
+            return Alert(
+                title: Text("Whilst thou rested..."),
+                message: Text("Thy coffers have grown by \(gameData.passiveGoldGained)🟡 and thy knowledge by \(gameData.passiveXPGained) XP."),
+                dismissButton: .default(Text("Splendid!")) {
+                    gameData.passiveXPGained = 0
+                    gameData.passiveGoldGained = 0
+                    showNextAlert()
+                }
+            )
+        }
+    }
+}
+
+enum AlertItem: Identifiable {
+    case levelUp, passiveGains
+    var id: Self { self }
+}
 // MARK: Splash
 
 struct SplashView: View {
@@ -802,7 +858,7 @@ struct RunView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                     
                     Text("Adventuring: \(currentRun.location.shortName)")
-                    ProgressView(value: currentTime.timeIntervalSince(gameData.runStartTime ?? Date()), total: currentRun.duration)
+                    ProgressView(value: min(currentTime.timeIntervalSince(gameData.runStartTime ?? Date()), currentRun.duration), total: currentRun.duration)
                         .padding(.horizontal)
                 } else {
                     Text("Choose Thy Quest")
@@ -981,8 +1037,6 @@ struct InventoryView: View {
             List {
                 Section {
                     HStack {
-                        Image(systemName: "coins")
-                            .foregroundColor(.yellow)
                         Text("Gold:")
                         Spacer()
                         Text("\(gameData.wizard.gold)🟡")
