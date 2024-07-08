@@ -163,11 +163,54 @@ class GameData: ObservableObject {
     @Published var passiveXPGained: Int = 0
     @Published var passiveGoldGained: Int = 0
 //    @Published var showPassiveGainAlert = false
-    @Published var showLevelUpAlert = false
-    @Published var alertQueue: [(String, String)] = []
-    @Published var showingAlert = false
     @Published var currentAlert: (String, String)?
+    @Published private(set) var alertQueue: [CustomAlert] = []
+    @Published var showingAlert = false
+
+    private var unlockedFeatures: Set<String> = []
     
+    // MARK: GD - Alert System
+        
+        struct CustomAlert: Identifiable {
+            let id = UUID()
+            let title: String
+            let message: String
+            let type: AlertType
+        }
+
+        enum AlertType {
+            case levelUp, passiveGains, featureUnlock
+        }
+        
+    func showAlert(_ alert: CustomAlert) {
+         if alert.type == .featureUnlock && unlockedFeatures.contains(alert.title) {
+             return // Don't show feature unlock alert if it has been shown before
+         }
+
+         alertQueue.append(alert)
+         if !showingAlert {
+             displayNextAlert()
+         }
+
+         if alert.type == .featureUnlock {
+             unlockedFeatures.insert(alert.title)
+         }
+     }
+
+     func displayNextAlert() {
+         if !alertQueue.isEmpty {
+             showingAlert = true
+         } else {
+             showingAlert = false
+         }
+     }
+
+     func dismissCurrentAlert() {
+         if !alertQueue.isEmpty {
+             alertQueue.removeFirst()
+         }
+         displayNextAlert()
+     }
     
     init() {
         self.wizard = Wizard(name: "Merlin", level: 1, xp: 0, gold: 0, spells: [availableSpells[0]], inventory: [])
@@ -183,7 +226,7 @@ class GameData: ObservableObject {
         unlockedViews.insert(feature)
         
         let (title, message) = getUnlockMessage(for: feature)
-        showAlert(title: title, message: message)
+        showAlert(CustomAlert(title: title, message: message, type: .featureUnlock))
     }
 
     private func getUnlockMessage(for feature: String) -> (String, String) {
@@ -213,24 +256,6 @@ class GameData: ObservableObject {
         }
         if !unlockedViews.contains("HistoryView") && wizard.level >= 10 {
             unlockFeature("HistoryView")
-        }
-    }
-    
-    func showAlert(title: String, message: String) {
-        alertQueue.append((title, message))
-        if !showingAlert {
-            displayNextAlert()
-        }
-    }
-
-    func displayNextAlert() {
-        if let nextAlert = alertQueue.first {
-            currentAlert = nextAlert
-            showingAlert = true
-            alertQueue.removeFirst()
-        } else {
-            showingAlert = false
-            currentAlert = nil
         }
     }
     
@@ -339,13 +364,11 @@ class GameData: ObservableObject {
         let initialLevel = wizard.level
         while wizard.xp >= xpNeededForLevelUp {
             wizard.level += 1
-            print("Leveled up to \(wizard.level)")
         }
         if wizard.level > initialLevel {
             leveledUpDuringLastRun = true
-            showAlert(title: "Hark! Thou hast ascended!", message: "Thy prowess has grown. Thou art now level \(wizard.level)!")
+            showAlert(CustomAlert(title: "Hark! Thou hast ascended!", message: "Thy prowess has grown. Thou art now level \(wizard.level)!", type: .levelUp))
             lastLevelUp = wizard.level
-            print("Total level ups: \(wizard.level - initialLevel)")
         }
         objectWillChange.send()
     }
@@ -389,9 +412,9 @@ class GameData: ObservableObject {
         
         lastUpdateTime = now
         if passiveXPGained > 0 || passiveGoldGained > 0 {
-            showAlert(title: "Whilst thou rested...", message: "Thy coffers have grown by \(passiveGoldGained)🟡 and thy knowledge by \(passiveXPGained) XP.")
-                }
-        
+               showAlert(CustomAlert(title: "Whilst thou rested...", message: "Thy coffers have grown by \(passiveGoldGained)🟡 and thy knowledge by \(passiveXPGained) XP.", type: .passiveGains))
+           }
+
         checkLevelUp()
         saveGame()
     }
@@ -621,13 +644,14 @@ struct ContentView: View {
             updatePassiveGains()
         }
         .withTextShadow()
-        .alert(isPresented: $gameData.showingAlert, content: {
-            Alert(title: Text(gameData.currentAlert?.0 ?? ""),
-                  message: Text(gameData.currentAlert?.1 ?? ""),
-                  dismissButton: .default(Text("OK"), action: {
-                      gameData.displayNextAlert()
-                  }))
-        })
+        .alert(item: Binding<GameData.CustomAlert?>(
+            get: { self.gameData.alertQueue.first },
+            set: { _ in self.gameData.dismissCurrentAlert() }
+        )) { alert in
+            Alert(title: Text(alert.title),
+                  message: Text(alert.message),
+                  dismissButton: .default(Text("OK")))
+        }
     }
     
     var mainContent: some View {
@@ -717,10 +741,10 @@ struct ContentView: View {
 }
 
 
-enum AlertItem: Identifiable {
-    case levelUp, passiveGains
-    var id: Self { self }
-}
+//enum AlertItem: Identifiable {
+//    case levelUp, passiveGains
+//    var id: Self { self }
+//}
 // MARK: Splash
 
 struct SplashView: View {
@@ -929,14 +953,16 @@ struct PlaceholderView: View {
 
 // MARK: - Run View
 
+
 struct RunView: View {
     @EnvironmentObject var gameData: GameData
     @State private var selectedLocation: Location?
-    @State private var timer: Timer?
     @State private var currentTime = Date()
     @State private var showSummary = false
     @State private var lastCompletedRun: Run?
     @State private var didLevelUp = false
+    
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var sortedLocations: [Location] {
         return allLocations.sorted { $0.requiredLevel > $1.requiredLevel }
@@ -966,7 +992,11 @@ struct RunView: View {
                 lastCompletedRun = gameData.completedRuns.last
                 didLevelUp = gameData.wizard.level > (lastCompletedRun?.location.requiredLevel ?? 0)
                 showSummary = true
+                gameData.checkUnlocks() // This will trigger any necessary unlock alerts
             }
+        }
+        .onReceive(timer) { _ in
+            self.currentTime = Date()
         }
     }
 
@@ -1026,21 +1056,9 @@ struct RunView: View {
         .sheet(item: $selectedLocation) { location in
             LocationDetailView(location: location, gameData: gameData)
         }
-        .onAppear(perform: startTimer)
-        .onDisappear(perform: stopTimer)
-    }
-
-    func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            self.currentTime = Date()
-        }
-    }
-    
-    func stopTimer() {
-        timer?.invalidate()
-        timer = nil
     }
 }
+
 
 struct LocationDetailView: View {
     let location: Location
@@ -1431,21 +1449,22 @@ struct GoldToXPConversionView: View {
                     self.gameData.saveGame()
                     print("Game saved. New level: \(self.gameData.wizard.level)")
                     self.gameData.objectWillChange.send()
+                    self.isPresented = false
                     
-                    // Check if level up occurred and present the alert
-                    if self.gameData.showLevelUpAlert {
-                        self.isPresented = false  // Close the conversion view
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            self.gameData.objectWillChange.send()
-                        }
-                        // The level up alert will be shown by the main ContentView
+//                    // Check if level up occurred and present the alert
+//                    if self.gameData.showLevelUpAlert {
+//                        self.isPresented = false  // Close the conversion view
+//                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//                            self.gameData.objectWillChange.send()
+//                        }
+//                        // The level up alert will be shown by the main ContentView
                     }
                 }
             }
         }
     }
     
-}
+
 
 
 struct CustomSlider: View {
