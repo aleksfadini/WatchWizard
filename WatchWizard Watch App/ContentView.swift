@@ -147,6 +147,8 @@ class GameData: ObservableObject {
     @Published var isTestMode: Bool = true
     @Published var easyXP: Bool = false
     @Published var extraMoney: Bool = true
+    // Locked Views
+    @Published var unlockedViews: Set<String> = ["CharacterSheet", "ArcaneLibrary"]
     // Script Vars
     @Published var wizard: Wizard
 //    @Published var purchasedSpells: [Spell] = []
@@ -162,6 +164,9 @@ class GameData: ObservableObject {
     @Published var passiveGoldGained: Int = 0
 //    @Published var showPassiveGainAlert = false
     @Published var showLevelUpAlert = false
+    @Published var alertQueue: [(String, String)] = []
+    @Published var showingAlert = false
+    @Published var currentAlert: (String, String)?
     
     
     init() {
@@ -174,7 +179,61 @@ class GameData: ObservableObject {
         }
     }
 
+    func unlockFeature(_ feature: String) {
+        unlockedViews.insert(feature)
+        
+        let (title, message) = getUnlockMessage(for: feature)
+        showAlert(title: title, message: message)
+    }
 
+    private func getUnlockMessage(for feature: String) -> (String, String) {
+        switch feature {
+        case "RunView":
+            return ("A World Awaits!", "Thy skills have grown, brave wizard. New lands and adventures now beckon thee. Venture forth and explore the realm!")
+        case "ShopView":
+            return ("Mystical Emporium Discovered!", "In thy travels, thou hast stumbled upon a hidden shop of arcane wonders. Its proprietor welcomes thee to peruse the mystical wares.")
+        case "InventoryView":
+            return ("Enchanted Satchel Acquired!", "A magical satchel has appeared at thy side. 'Tis bound to thee, ready to store the treasures of thy quests.")
+        case "HistoryView":
+            return ("Chronicles of thy Deeds!", "The bards have begun to sing of thy exploits. Thy legendary tales are now recorded for posterity.")
+        default:
+            return ("New Power Awakened!", "A new ability has manifested within thee. Explore and discover its secrets!")
+        }
+    }
+ 
+    func checkUnlocks() {
+        if !unlockedViews.contains("RunView") && wizard.level >= 2 {
+            unlockFeature("RunView")
+        }
+        if !unlockedViews.contains("ShopView") && completedRuns.contains(where: { $0.location.shortName == "Village" }) {
+            unlockFeature("ShopView")
+        }
+        if !unlockedViews.contains("InventoryView") && completedRuns.contains(where: { $0.location.shortName == "Inn Basement" }) {
+            unlockFeature("InventoryView")
+        }
+        if !unlockedViews.contains("HistoryView") && wizard.level >= 10 {
+            unlockFeature("HistoryView")
+        }
+    }
+    
+    func showAlert(title: String, message: String) {
+        alertQueue.append((title, message))
+        if !showingAlert {
+            displayNextAlert()
+        }
+    }
+
+    func displayNextAlert() {
+        if let nextAlert = alertQueue.first {
+            currentAlert = nextAlert
+            showingAlert = true
+            alertQueue.removeFirst()
+        } else {
+            showingAlert = false
+            currentAlert = nil
+        }
+    }
+    
     var totalSuccessChanceBonus: Double {
          wizard.spells.reduce(0) { $0 + $1.successChanceBonus }
      }
@@ -239,6 +298,7 @@ class GameData: ObservableObject {
           checkLevelUp()
           runStartTime = nil
           saveGame()
+          checkUnlocks()
       }
 
     func generateItems(for location: Location) -> [Item] {
@@ -283,29 +343,12 @@ class GameData: ObservableObject {
         }
         if wizard.level > initialLevel {
             leveledUpDuringLastRun = true
-            showLevelUpAlert = true  // Add this line
+            showAlert(title: "Hark! Thou hast ascended!", message: "Thy prowess has grown. Thou art now level \(wizard.level)!")
             lastLevelUp = wizard.level
             print("Total level ups: \(wizard.level - initialLevel)")
         }
         objectWillChange.send()
     }
-    
-//    func checkLevelUp() {
-//        DispatchQueue.main.async {
-//            let initialLevel = self.wizard.level
-//            while self.wizard.xp >= self.xpNeededForLevelUp {
-//                self.wizard.level += 1
-//                print("Leveled up to \(self.wizard.level)")
-//            }
-//            if self.wizard.level > initialLevel {
-//                self.leveledUpDuringLastRun = true
-//                self.showLevelUpAlert = true
-//                self.lastLevelUp = self.wizard.level
-//                print("Total level ups: \(self.wizard.level - initialLevel)")
-//            }
-//            self.objectWillChange.send()
-//        }
-//    }
     
     func purchaseSpell(_ spell: Spell) {
         if wizard.gold >= spell.goldCost && wizard.level >= spell.requiredLevel {
@@ -314,6 +357,7 @@ class GameData: ObservableObject {
             wizard.xpPerHour += spell.xpPerHour
             wizard.goldPerHour += spell.goldPerHour
         saveGame()
+        checkUnlocks()
         }
     }
     
@@ -333,10 +377,6 @@ class GameData: ObservableObject {
             .first { !isLocationUnlocked($0) }
     }
     
-//     func nextUnlockedLocation() -> Location? {
-//         return allLocations.first { !isLocationUnlocked($0) }
-//     }
-    
     func updatePassiveGains() {
         let now = Date()
         let elapsedHours = now.timeIntervalSince(lastUpdateTime) / 3600
@@ -348,6 +388,9 @@ class GameData: ObservableObject {
         wizard.gold += passiveGoldGained
         
         lastUpdateTime = now
+        if passiveXPGained > 0 || passiveGoldGained > 0 {
+            showAlert(title: "Whilst thou rested...", message: "Thy coffers have grown by \(passiveGoldGained)🟡 and thy knowledge by \(passiveXPGained) XP.")
+                }
         
         checkLevelUp()
         saveGame()
@@ -419,16 +462,16 @@ let creatures = [
 ]
 
 let levelUpXPRequirements = [
-    50,    // Level 1 to 2
-    200,   // Level 2 to 3
-    500,   // Level 3 to 4
-    1000,  // Level 4 to 5
-    2000,  // Level 5 to 6
-    3500,  // Level 6 to 7
-    5500,  // Level 7 to 8
-    8000,  // Level 8 to 9
-    11000, // Level 9 to 10
-    15000  // Level 10 to 11
+    10,    // Level 1 to 2
+    50,   // Level 2 to 3
+    100,   // Level 3 to 4
+    200,  // Level 4 to 5
+    500,  // Level 5 to 6
+    1000,  // Level 6 to 7
+    2500,  // Level 7 to 8
+    5500,  // Level 8 to 9
+    10000, // Level 9 to 10
+    30000  // Level 10 to 11
 ]
 
 let availableSpells = [
@@ -554,8 +597,6 @@ struct ContentView: View {
     @StateObject private var gameData = GameData()
     @State private var showSplash = true
     @State private var splashOpacity: Double = 1.0
-    @State private var showLevelUpAlert = false
-    @State private var showPassiveGainsAlert = false
 
     var body: some View {
         ZStack {
@@ -580,40 +621,85 @@ struct ContentView: View {
             updatePassiveGains()
         }
         .withTextShadow()
-        .alert("Hark! Thou hast ascended!", isPresented: $showLevelUpAlert) {
-            Button("View Character Sheet") {
-                // Add navigation to character sheet if needed
-            }
-        } message: {
-            Text("Thy prowess has grown. Thou art now level \(gameData.lastLevelUp ?? 0)!")
-        }
-        .alert("Whilst thou rested...", isPresented: $showPassiveGainsAlert) {
-            Button("Splendid!") {
-                gameData.passiveXPGained = 0
-                gameData.passiveGoldGained = 0
-            }
-        } message: {
-            Text("Thy coffers have grown by \(gameData.passiveGoldGained)🟡 and thy knowledge by \(gameData.passiveXPGained) XP.")
-        }
+        .alert(isPresented: $gameData.showingAlert, content: {
+            Alert(title: Text(gameData.currentAlert?.0 ?? ""),
+                  message: Text(gameData.currentAlert?.1 ?? ""),
+                  dismissButton: .default(Text("OK"), action: {
+                      gameData.displayNextAlert()
+                  }))
+        })
     }
     
     var mainContent: some View {
         TabView {
             WizardView()
-            RunView()
-            InventoryView()
-            SpellShopView()
-            HistoryView()
+                .tabItem {
+                    Image(systemName: "person.fill")
+                    Text("Character")
+                }
+            
+            ArcaneLibraryView()
+                .tabItem {
+                    Image(systemName: "book.fill")
+                    Text("Library")
+                }
+            
+            Group {
+                if gameData.unlockedViews.contains("RunView") {
+                    RunView()
+                } else {
+                    PlaceholderView()
+                }
+            }
+            .tabItem {
+                Image(systemName: "map.fill")
+                Text(gameData.unlockedViews.contains("RunView") ? "Quest" : "???")
+            }
+            
+            Group {
+                if gameData.unlockedViews.contains("ShopView") {
+                    SpellShopView()
+                } else {
+                    PlaceholderView()
+                }
+            }
+            .tabItem {
+                Image(systemName: "wand.and.stars")
+                Text(gameData.unlockedViews.contains("ShopView") ? "Shop" : "???")
+            }
+            
+            Group {
+                if gameData.unlockedViews.contains("InventoryView") {
+                    InventoryView()
+                } else {
+                    PlaceholderView()
+                }
+            }
+            .tabItem {
+                Image(systemName: "bag.fill")
+                Text(gameData.unlockedViews.contains("InventoryView") ? "Satchel" : "???")
+            }
+            
+            Group {
+                if gameData.unlockedViews.contains("HistoryView") {
+                    HistoryView()
+                } else {
+                    PlaceholderView()
+                }
+            }
+            .tabItem {
+                Image(systemName: "scroll.fill")
+                Text(gameData.unlockedViews.contains("HistoryView") ? "History" : "???")
+            }
         }
         .environmentObject(gameData)
         .withTextShadow()
         .onAppear {
             updatePassiveGains()
-        }
-        .onChange(of: gameData.wizard.level) {
-            checkForAlerts()
+            gameData.checkUnlocks()
         }
     }
+    
 
     private func endSplash() {
         withAnimation(.easeOut(duration: 0.3)) {
@@ -626,17 +712,7 @@ struct ContentView: View {
 
     private func updatePassiveGains() {
         gameData.updatePassiveGains()
-        checkForAlerts()
-    }
-
-    private func checkForAlerts() {
-        if gameData.showLevelUpAlert {
-            showLevelUpAlert = true
-            gameData.showLevelUpAlert = false
-        }
-        if gameData.passiveXPGained > 0 || gameData.passiveGoldGained > 0 {
-            showPassiveGainsAlert = true
-        }
+        gameData.checkUnlocks()
     }
 }
 
@@ -799,6 +875,57 @@ struct SpellDetailPurchaseView: View {
         }
     }
 }
+
+// MARK: - Arcane Library View
+struct ArcaneLibraryView: View {
+    @EnvironmentObject var gameData: GameData
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Arcane Sanctum")
+                .font(.largeTitle)
+                .withTextShadow()
+            
+            Text("Delve into ancient tomes to expand thy knowledge")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .withTextShadow()
+            
+            Button(action: {
+                gameData.wizard.xp += 1
+                gameData.checkLevelUp()
+                gameData.checkUnlocks()
+            }) {
+                Text("Study Arcane Texts")
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            
+            Text("XP: \(gameData.wizard.xp)")
+                .font(.headline)
+                .withTextShadow()
+        }
+        .padding()
+    }
+}
+
+// MARK: - Placeholder View
+
+struct PlaceholderView: View {
+    var body: some View {
+        VStack {
+            Image(systemName: "lock.fill")
+                .font(.largeTitle)
+            Text("This mystical power lies dormant. Continue thy quests to unlock its secrets.")
+                .multilineTextAlignment(.center)
+                .padding()
+        }
+        .foregroundColor(.gray)
+    }
+}
+
 
 // MARK: - Run View
 
