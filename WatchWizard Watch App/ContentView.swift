@@ -313,9 +313,14 @@ class GameData: ObservableObject {
          return wizard.level >= location.requiredLevel
      }
      
-     func nextUnlockedLocation() -> Location? {
-         return allLocations.first { !isLocationUnlocked($0) }
-     }
+    func nextUnlockedLocation() -> Location? {
+        return allLocations.sorted { $0.requiredLevel > $1.requiredLevel }
+            .first { !isLocationUnlocked($0) }
+    }
+    
+//     func nextUnlockedLocation() -> Location? {
+//         return allLocations.first { !isLocationUnlocked($0) }
+//     }
     
     func updatePassiveGains() {
         let now = Date()
@@ -819,6 +824,10 @@ struct RunView: View {
     @State private var showSummary = false
     @State private var lastCompletedRun: Run?
     @State private var didLevelUp = false
+    
+    var sortedLocations: [Location] {
+        return allLocations.sorted { $0.requiredLevel > $1.requiredLevel }
+    }
 
     var body: some View {
         ZStack {
@@ -866,7 +875,7 @@ struct RunView: View {
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .center)
                     
-                    ForEach(allLocations) { location in
+                    ForEach(sortedLocations) { location in
                         if gameData.isLocationUnlocked(location) {
                             Button(action: {
                                 selectedLocation = location
