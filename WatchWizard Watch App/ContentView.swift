@@ -145,7 +145,7 @@ enum ItemType {
 class GameData: ObservableObject {
     // Dev Vars
     @Published var isTestMode: Bool = true
-    @Published var easyXP: Bool = true
+    @Published var easyXP: Bool = false
     @Published var extraMoney: Bool = true
     // Script Vars
     @Published var wizard: Wizard
@@ -179,9 +179,10 @@ class GameData: ObservableObject {
          wizard.spells.reduce(0) { $0 + $1.successChanceBonus }
      }
     
+    
     var xpNeededForLevelUp: Int {
         if easyXP {
-            return 200 // in easyXP mode, only 5 xp per level
+            return 200 // in easyXP mode, only 200 xp per level
         } else {
             let currentLevel = wizard.level
             if currentLevel <= levelUpXPRequirements.count {
@@ -192,6 +193,7 @@ class GameData: ObservableObject {
             }
         }
     }
+
 
     
     func startRun(location: Location) {
@@ -234,7 +236,7 @@ class GameData: ObservableObject {
           completedRuns.append(run)
           currentRun = nil
           
-          checkAndHandleLevelUp()
+          checkLevelUp()
           runStartTime = nil
           saveGame()
       }
@@ -274,23 +276,36 @@ class GameData: ObservableObject {
         }
     
     func checkLevelUp() {
-        var didLevelUp = false
+        let initialLevel = wizard.level
         while wizard.xp >= xpNeededForLevelUp {
             wizard.level += 1
-            didLevelUp = true
+            print("Leveled up to \(wizard.level)")
         }
-        leveledUpDuringLastRun = didLevelUp
-    }
-    
-    
-    func checkAndHandleLevelUp() {
-        let oldLevel = wizard.level
-        checkLevelUp()
-        if wizard.level > oldLevel {
+        if wizard.level > initialLevel {
+            leveledUpDuringLastRun = true
+            showLevelUpAlert = true  // Add this line
             lastLevelUp = wizard.level
-            showLevelUpAlert = true
+            print("Total level ups: \(wizard.level - initialLevel)")
         }
+        objectWillChange.send()
     }
+    
+//    func checkLevelUp() {
+//        DispatchQueue.main.async {
+//            let initialLevel = self.wizard.level
+//            while self.wizard.xp >= self.xpNeededForLevelUp {
+//                self.wizard.level += 1
+//                print("Leveled up to \(self.wizard.level)")
+//            }
+//            if self.wizard.level > initialLevel {
+//                self.leveledUpDuringLastRun = true
+//                self.showLevelUpAlert = true
+//                self.lastLevelUp = self.wizard.level
+//                print("Total level ups: \(self.wizard.level - initialLevel)")
+//            }
+//            self.objectWillChange.send()
+//        }
+//    }
     
     func purchaseSpell(_ spell: Spell) {
         if wizard.gold >= spell.goldCost && wizard.level >= spell.requiredLevel {
@@ -334,31 +349,10 @@ class GameData: ObservableObject {
         
         lastUpdateTime = now
         
-        checkAndHandleLevelUp()
+        checkLevelUp()
         saveGame()
     }
-//
-//    func updatePassiveGains() {
-//           let now = Date()
-//           let elapsedHours = now.timeIntervalSince(lastUpdateTime) / 3600
-//           
-//           passiveXPGained = Int(wizard.xpPerHour * elapsedHours)
-//           passiveGoldGained = Int(wizard.goldPerHour * elapsedHours)
-//           
-//           wizard.xp += passiveXPGained
-//           wizard.gold += passiveGoldGained
-//           
-//           lastUpdateTime = now
-//        
-//        if passiveXPGained > 0 || passiveGoldGained > 0 {
-//            showPassiveGainAlert = true
-//        } else {
-//            showPassiveGainAlert = false
-//        }
-//           checkAndHandleLevelUp()
-//           saveGame()
-//       }
-    
+
 //
 //  MARK: Save Game
 //
@@ -555,12 +549,13 @@ extension View {
 }
 
 // MARK: - Views
+
 struct ContentView: View {
     @StateObject private var gameData = GameData()
     @State private var showSplash = true
     @State private var splashOpacity: Double = 1.0
-    @State private var currentAlert: AlertItem?
-    @State private var alertQueue: [AlertItem] = []
+    @State private var showLevelUpAlert = false
+    @State private var showPassiveGainsAlert = false
 
     var body: some View {
         ZStack {
@@ -585,11 +580,23 @@ struct ContentView: View {
             updatePassiveGains()
         }
         .withTextShadow()
-        .alert(item: $currentAlert) { alert in
-            createAlert(for: alert)
+        .alert("Hark! Thou hast ascended!", isPresented: $showLevelUpAlert) {
+            Button("View Character Sheet") {
+                // Add navigation to character sheet if needed
+            }
+        } message: {
+            Text("Thy prowess has grown. Thou art now level \(gameData.lastLevelUp ?? 0)!")
+        }
+        .alert("Whilst thou rested...", isPresented: $showPassiveGainsAlert) {
+            Button("Splendid!") {
+                gameData.passiveXPGained = 0
+                gameData.passiveGoldGained = 0
+            }
+        } message: {
+            Text("Thy coffers have grown by \(gameData.passiveGoldGained)🟡 and thy knowledge by \(gameData.passiveXPGained) XP.")
         }
     }
-
+    
     var mainContent: some View {
         TabView {
             WizardView()
@@ -602,6 +609,9 @@ struct ContentView: View {
         .withTextShadow()
         .onAppear {
             updatePassiveGains()
+        }
+        .onChange(of: gameData.wizard.level) {
+            checkForAlerts()
         }
     }
 
@@ -621,44 +631,15 @@ struct ContentView: View {
 
     private func checkForAlerts() {
         if gameData.showLevelUpAlert {
-            alertQueue.append(.levelUp)
+            showLevelUpAlert = true
             gameData.showLevelUpAlert = false
         }
         if gameData.passiveXPGained > 0 || gameData.passiveGoldGained > 0 {
-            alertQueue.append(.passiveGains)
-        }
-        showNextAlert()
-    }
-
-    private func showNextAlert() {
-        guard currentAlert == nil, !alertQueue.isEmpty else { return }
-        currentAlert = alertQueue.removeFirst()
-    }
-
-    private func createAlert(for alert: AlertItem) -> Alert {
-        switch alert {
-        case .levelUp:
-            return Alert(
-                title: Text("Hark! Thou hast ascended!"),
-                message: Text("Thy prowess has grown. Thou art now level \(gameData.lastLevelUp ?? 0)!"),
-                dismissButton: .default(Text("View Character Sheet")) {
-                    // Add navigation to character sheet if needed
-                    showNextAlert()
-                }
-            )
-        case .passiveGains:
-            return Alert(
-                title: Text("Whilst thou rested..."),
-                message: Text("Thy coffers have grown by \(gameData.passiveGoldGained)🟡 and thy knowledge by \(gameData.passiveXPGained) XP."),
-                dismissButton: .default(Text("Splendid!")) {
-                    gameData.passiveXPGained = 0
-                    gameData.passiveGoldGained = 0
-                    showNextAlert()
-                }
-            )
+            showPassiveGainsAlert = true
         }
     }
 }
+
 
 enum AlertItem: Identifiable {
     case levelUp, passiveGains
@@ -736,8 +717,13 @@ struct WizardView: View {
                 SpellDetailView(spell: spell)
             }
         }
+        .onReceive(gameData.$wizard) { _ in
+            // This will trigger a view update whenever the wizard object changes
+        }
     }
 }
+
+
 struct SpellDetailView: View {
     let spell: Spell
 
@@ -1177,7 +1163,6 @@ struct SpellShopView: View {
         availableSpells
             .filter { spell in
                 spell.requiredLevel > gameData.wizard.level &&
-//                !gameData.purchasedSpells.contains(where: { $0.id == spell.id })
                 !gameData.wizard.spells.contains(where: { $0.id == spell.id })
             }
             .min(by: { $0.requiredLevel < $1.requiredLevel })
@@ -1194,7 +1179,6 @@ struct SpellShopView: View {
 
                 Section(header: Text("Purchase Spells")) {
                     ForEach(availableSpellsForPurchase) { spell in
-//                        if !gameData.purchasedSpells.contains(where: { $0.id == spell.id }) {
                         if !gameData.wizard.spells.contains(where: { $0.id == spell.id }) {
                             Button(action: {
                                 selectedSpell = spell
@@ -1215,20 +1199,14 @@ struct SpellShopView: View {
             }
             .navigationTitle("Mystic Emporium")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showingXPConversionView) {
-                GoldToXPConversionView(isPresented: $showingXPConversionView)
-                    .presentationDetents([.height(250)]) // Adjust height as needed
-                    .presentationDragIndicator(.hidden)
-                    .interactiveDismissDisabled(true) // This prevents dismissal by dragging down
-            }
-//            .sheet(isPresented: $showingXPConversionView) {
-//                GoldToXPConversionView(isPresented: $showingXPConversionView)
-//            }
             .sheet(item: $selectedSpell) { spell in
                 SpellDetailPurchaseView(spell: spell, isPresented: Binding(
                     get: { selectedSpell != nil },
                     set: { if !$0 { selectedSpell = nil } }
                 ))
+            }
+            .sheet(isPresented: $showingXPConversionView) {
+                GoldToXPConversionView(isPresented: $showingXPConversionView)
             }
         }
     }
@@ -1263,13 +1241,16 @@ struct SpellShopView: View {
     }
 }
 
-
 struct GoldToXPConversionView: View {
     @EnvironmentObject var gameData: GameData
     @Binding var isPresented: Bool
     @State private var goldToConvert: Double = 0
     
     let conversionRate = 1 // 1 gold = 1 XP
+    
+    var maxConversion: Int {
+        min(gameData.wizard.gold, gameData.xpNeededForLevelUp - gameData.wizard.xp)
+    }
     
     var body: some View {
         VStack(spacing: 10) {
@@ -1283,14 +1264,13 @@ struct GoldToXPConversionView: View {
             Text("You will gain \(Int(goldToConvert * Double(conversionRate))) XP")
                 .font(.caption)
             
-            CustomSlider(value: $goldToConvert, bounds: 0...Double(gameData.wizard.gold))
+            CustomSlider(value: $goldToConvert, bounds: 0...Double(maxConversion))
                 .frame(height: 30)
                 .padding(.horizontal)
             
             HStack {
                 Button("Convert") {
                     convertGoldToXP()
-                    isPresented = false
                 }
                 .buttonStyle(BorderedButtonStyle(tint: .blue))
                 .disabled(goldToConvert == 0)
@@ -1298,25 +1278,48 @@ struct GoldToXPConversionView: View {
                 Button("Cancel") {
                     isPresented = false
                 }
-                
                 .buttonStyle(BorderedButtonStyle(tint: .red))
             }
         }
         .padding()
         .focusable()
-        .digitalCrownRotation($goldToConvert, from: 0, through: Double(gameData.wizard.gold), by: 1, sensitivity: .high, isContinuous: false, isHapticFeedbackEnabled: true)
+        .digitalCrownRotation($goldToConvert, from: 0, through: Double(maxConversion), by: 1, sensitivity: .high, isContinuous: false, isHapticFeedbackEnabled: true)
     }
+    
     
     func convertGoldToXP() {
         let amountToConvert = Int(goldToConvert)
-        if amountToConvert <= gameData.wizard.gold {
-            gameData.wizard.gold -= amountToConvert
-            gameData.wizard.xp += amountToConvert * conversionRate
-            gameData.checkLevelUp()
-        gameData.saveGame()
+        print("Attempting to convert \(amountToConvert) gold to XP")
+        if amountToConvert <= gameData.wizard.gold && amountToConvert <= maxConversion {
+            DispatchQueue.global(qos: .userInitiated).async {
+                let newGold = self.gameData.wizard.gold - amountToConvert
+                let newXP = self.gameData.wizard.xp + (amountToConvert * self.conversionRate)
+                print("Converted \(amountToConvert) gold to \(amountToConvert * self.conversionRate) XP")
+                print("New XP: \(newXP), XP needed for level up: \(self.gameData.xpNeededForLevelUp)")
+                
+                DispatchQueue.main.async {
+                    self.gameData.wizard.gold = newGold
+                    self.gameData.wizard.xp = newXP
+                    self.gameData.checkLevelUp()
+                    self.gameData.saveGame()
+                    print("Game saved. New level: \(self.gameData.wizard.level)")
+                    self.gameData.objectWillChange.send()
+                    
+                    // Check if level up occurred and present the alert
+                    if self.gameData.showLevelUpAlert {
+                        self.isPresented = false  // Close the conversion view
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            self.gameData.objectWillChange.send()
+                        }
+                        // The level up alert will be shown by the main ContentView
+                    }
+                }
+            }
         }
     }
+    
 }
+
 
 struct CustomSlider: View {
     @Binding var value: Double
