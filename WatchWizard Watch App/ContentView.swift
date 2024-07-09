@@ -762,6 +762,19 @@ extension View {
     }
 }
 
+struct CustomNavigationTitleView: View {
+    let title: String
+    
+    var body: some View {
+        Text(title)
+            .withBoldShadow()
+//            .font(.custom("Lancelot", size: 26))
+//            .foregroundColor(.white)
+
+    }
+}
+
+
 // MARK: - Views
 struct ContentView: View {
     @StateObject private var gameData = GameData()
@@ -1348,6 +1361,11 @@ struct InventoryView: View {
         ZStack {
             BackgroundView(imageName: "satchel")
             NavigationView {
+                VStack(spacing: 0) {
+                                    CustomNavigationTitleView(title: "Adventurer's Satchel")
+                        .frame(height: 5)
+                        .padding(.bottom, 10)
+                                    
                 List {
                     Section {
                         HStack {
@@ -1355,37 +1373,37 @@ struct InventoryView: View {
                             Spacer()
                             Text("\(gameData.wizard.gold)🟡")
                                 .fontWeight(.bold).foregroundColor(.yellow)
-                        }.withTextShadow()
-                    }
+                        }
+//                        .withTextShadow()
+                    }.withTextShadow()
                     
                     Section(header: Text("Trade")) {
                         Button("Sell All Items") {
                             showingSellAllConfirmation = true
                         }
-                        .withTextShadow()
-                    }
+  
+                    }.withTextShadow()
                     
                         Section(header: Text("Sell Treasures")) {
-                        ForEach(gameData.wizard.inventory, id: \.name) { item in
-                            Button(action: {
-                                selectedItem = item
-                                
-                            }) {
-                                HStack {
-                                    Text(item.name)
-                                    Spacer()
-                                    Text("x\(item.quantity)")
+                            ForEach(gameData.wizard.inventory, id: \.name) { item in
+                                Button(action: {
+                                    selectedItem = item
+                                    
+                                }) {
+                                    HStack {
+                                        Text(item.name)
+                                        Spacer()
+                                        Text("x\(item.quantity)")
+                                    }
+//                                    .withTextShadow()
                                 }
-                                .withTextShadow()
+                                
                             }
-
-                            
                         }
                     }
                         .withTextShadow()
                 }
-                .navigationTitle("Adventurer's Satchel")
-                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarHidden(true)
                 .sheet(item: $selectedItem) { item in
                     SellItemView(item: item, gameData: gameData, isPresented: Binding(
                         get: { selectedItem != nil },
@@ -1427,6 +1445,7 @@ struct InventoryView: View {
         gameData.saveGame()
     }
 }
+
 
 struct SellItemView: View {
     let item: Item
@@ -1496,44 +1515,51 @@ struct SpellShopView: View {
         ZStack {
             BackgroundView(imageName: "emporium")
             NavigationView {
-                List {
-                    Section(header: Text("Arcane Exchange")) {
-                        Button("Convert Gold to Arcane Knowledge") {
-                            showingXPConversionView = true
-                        }
-                    }
+                VStack(spacing: 0) {
+                    CustomNavigationTitleView(title: "Mystic Emporium")
+                        .frame(height: 5)
+                        .padding(.bottom, 10)
                     
-                    Section(header: Text("Purchase Spells")) {
-                        ForEach(availableSpellsForPurchase) { spell in
-                            if !gameData.wizard.spells.contains(where: { $0.id == spell.id }) {
-                                Button(action: {
-                                    selectedSpell = spell
-                                }) {
-                                    HStack {
-                                        Text(spell.name)
-                                        Spacer()
-                                        Text("\(spell.goldCost)🟡")
-                                    }
-                                }
+                    List {
+                        Section(header: Text("Arcane Exchange")) {
+                            Button("Convert Gold to Arcane Knowledge") {
+                                showingXPConversionView = true
                             }
                         }
                         
-                        if let nextSpell = nextAvailableSpell {
-                            nextSpellButton(for: nextSpell)
+                        Section(header: Text("Purchase Spells")) {
+                            ForEach(availableSpellsForPurchase) { spell in
+                                if !gameData.wizard.spells.contains(where: { $0.id == spell.id }) {
+                                    Button(action: {
+                                        selectedSpell = spell
+                                    }) {
+                                        HStack {
+                                            Text(spell.name)
+                                            Spacer()
+                                            Text("\(spell.goldCost)🟡")
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if let nextSpell = nextAvailableSpell {
+                                nextSpellButton(for: nextSpell)
+                            }
                         }
                     }
+                    //                .navigationTitle("Mystic Emporium")
+                    //                .navigationBarTitleDisplayMode(.inline)
+                    .sheet(item: $selectedSpell) { spell in
+                        SpellDetailPurchaseView(spell: spell, isPresented: Binding(
+                            get: { selectedSpell != nil },
+                            set: { if !$0 { selectedSpell = nil } }
+                        ))
+                    }
+                    .sheet(isPresented: $showingXPConversionView) {
+                        GoldToXPConversionView(isPresented: $showingXPConversionView)
+                    }
                 }
-                .navigationTitle("Mystic Emporium")
-                .navigationBarTitleDisplayMode(.inline)
-                .sheet(item: $selectedSpell) { spell in
-                    SpellDetailPurchaseView(spell: spell, isPresented: Binding(
-                        get: { selectedSpell != nil },
-                        set: { if !$0 { selectedSpell = nil } }
-                    ))
-                }
-                .sheet(isPresented: $showingXPConversionView) {
-                    GoldToXPConversionView(isPresented: $showingXPConversionView)
-                }
+                .navigationBarHidden(true)
             }
         }
     }
@@ -1702,16 +1728,17 @@ struct HistoryView: View {
                     let run = gameData.completedRuns[index]
                     VStack(alignment: .leading, spacing: 5) {
                         Text("\(run.location.shortName): \(run.succeeded ? "Success" : "Failure")")
-                            .font(.headline)
+                            .withBoldShadow()
                         Text("XP: +\(run.xpGained), Gold: +\(run.goldGained)")
+                            .withTextShadow()
                         Text("Items: \(run.itemsGained.map { "\($0.name) x\($0.quantity)" }.joined(separator: ", "))")
-                            .font(.footnote)
+                            .withTextShadow()
                         Text("Defeated: \(run.creaturesDefeated.joined(separator: ", "))")
-                            .font(.footnote)
+                            .withTextShadow()
                     }
                          .listRowBackground(Color.clear) // Make list rows transparent
                      }
-                 }
+            }
                  .listStyle(PlainListStyle()) // Use plain style to remove default list background
              }
             .navigationTitle("Heroic Deeds")
