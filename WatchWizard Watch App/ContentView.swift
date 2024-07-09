@@ -266,8 +266,6 @@ class GameData: ObservableObject {
             self.currentAlert = self.alertQueue.first
         }
     }
-
-
     
     init() {
         self.wizard = Wizard(name: "Merlin", level: 1, xp: 0, gold: 0, spells: [availableSpells[0]], inventory: [])
@@ -1559,6 +1557,7 @@ struct SpellShopView: View {
                         GoldToXPConversionView(isPresented: $showingXPConversionView)
                     }
                 }
+                .withTextShadow()
                 .navigationBarHidden(true)
             }
         }
@@ -1720,29 +1719,35 @@ struct HistoryView: View {
     @EnvironmentObject var gameData: GameData
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                BackgroundView(imageName: "PaperRoll")
-            List {
-                ForEach(gameData.completedRuns.indices.reversed(), id: \.self) { index in
-                    let run = gameData.completedRuns[index]
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("\(run.location.shortName): \(run.succeeded ? "Success" : "Failure")")
-                            .withBoldShadow()
-                        Text("XP: +\(run.xpGained), Gold: +\(run.goldGained)")
-                            .withTextShadow()
-                        Text("Items: \(run.itemsGained.map { "\($0.name) x\($0.quantity)" }.joined(separator: ", "))")
-                            .withTextShadow()
-                        Text("Defeated: \(run.creaturesDefeated.joined(separator: ", "))")
-                            .withTextShadow()
+        ZStack {
+            BackgroundView(imageName: "PaperRoll")
+            NavigationView {
+
+                    VStack(spacing: 0) {
+                        CustomNavigationTitleView(title: "Heroic Deeds")
+                            .frame(height: 5)
+                            .padding(.bottom, 10)
+                    List {
+                        ForEach(gameData.completedRuns.indices.reversed(), id: \.self) { index in
+                            let run = gameData.completedRuns[index]
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("\(run.location.shortName): \(run.succeeded ? "Success" : "Failure")")
+                                    .withBoldShadow()
+                                Text("XP: +\(run.xpGained), Gold: +\(run.goldGained)")
+                                    .withTextShadow()
+                                Text("Items: \(run.itemsGained.map { "\($0.name) x\($0.quantity)" }.joined(separator: ", "))")
+                                    .withTextShadow()
+                                Text("Defeated: \(run.creaturesDefeated.joined(separator: ", "))")
+                                    .withTextShadow()
+                            }
+                            .listRowBackground(Color.clear) // Make list rows transparent
+                        }
                     }
-                         .listRowBackground(Color.clear) // Make list rows transparent
-                     }
+                    .listStyle(PlainListStyle()) // Use plain style to remove default list background
+                }
+             
             }
-                 .listStyle(PlainListStyle()) // Use plain style to remove default list background
-             }
-            .navigationTitle("Heroic Deeds")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(true)
         }
     }
 }
