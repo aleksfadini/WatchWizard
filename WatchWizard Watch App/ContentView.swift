@@ -1102,6 +1102,8 @@ struct RunView: View {
     @State private var showSummary = false
     @State private var lastCompletedRun: Run?
     @State private var didLevelUp = false
+    @State private var viewDidAppear = false
+
     
     @StateObject private var runTimer = RunTimer()
     
@@ -1140,6 +1142,13 @@ struct RunView: View {
         }
         .sheet(item: $selectedLocation) { location in
             LocationDetailView(location: location, gameData: gameData)
+        }
+        .onAppear {
+            if !viewDidAppear {
+                showSummary = false
+                lastCompletedRun = nil
+                viewDidAppear = true
+            }
         }
     }
 
