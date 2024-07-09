@@ -98,7 +98,7 @@ struct Item: Identifiable, Equatable, Codable {
     }
 }
 
-struct Run {
+struct Run: Codable {
     var location: Location
     var duration: TimeInterval
     var xpGained: Int
@@ -120,24 +120,76 @@ struct Treasure {
     let minLevel: Int
 }
 
-struct Location: Identifiable,Equatable {
-    let id = UUID()
+struct Location: Identifiable, Equatable, Codable {
+    let id: UUID
     let shortName: String
     let fullName: String
     let description: String
     let requiredLevel: Int
     let missionMessage: String
-    let baseXP: ClosedRange<Int>
-    let baseGold: ClosedRange<Int>
-    let difficulty: Double // 0.0 to 1.0, where 1.0 is most difficult
-    let runDuration: ClosedRange<TimeInterval>
-    let itemTypes: [ItemType] = [.treasure]
-    static func == (lhs: Location, rhs: Location) -> Bool {
-        return lhs.id == rhs.id
+    let baseXPLower: Int
+    let baseXPUpper: Int
+    let baseGoldLower: Int
+    let baseGoldUpper: Int
+    let difficulty: Double
+    let runDurationLower: TimeInterval
+    let runDurationUpper: TimeInterval
+    let itemTypes: [ItemType]
+
+    var baseXP: ClosedRange<Int> {
+        baseXPLower...baseXPUpper
+    }
+
+    var baseGold: ClosedRange<Int> {
+        baseGoldLower...baseGoldUpper
+    }
+
+    var runDuration: ClosedRange<TimeInterval> {
+        runDurationLower...runDurationUpper
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, shortName, fullName, description, requiredLevel, missionMessage
+        case baseXPLower, baseXPUpper, baseGoldLower, baseGoldUpper
+        case difficulty, runDurationLower, runDurationUpper, itemTypes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        shortName = try container.decode(String.self, forKey: .shortName)
+        fullName = try container.decode(String.self, forKey: .fullName)
+        description = try container.decode(String.self, forKey: .description)
+        requiredLevel = try container.decode(Int.self, forKey: .requiredLevel)
+        missionMessage = try container.decode(String.self, forKey: .missionMessage)
+        baseXPLower = try container.decode(Int.self, forKey: .baseXPLower)
+        baseXPUpper = try container.decode(Int.self, forKey: .baseXPUpper)
+        baseGoldLower = try container.decode(Int.self, forKey: .baseGoldLower)
+        baseGoldUpper = try container.decode(Int.self, forKey: .baseGoldUpper)
+        difficulty = try container.decode(Double.self, forKey: .difficulty)
+        runDurationLower = try container.decode(TimeInterval.self, forKey: .runDurationLower)
+        runDurationUpper = try container.decode(TimeInterval.self, forKey: .runDurationUpper)
+        itemTypes = try container.decode([ItemType].self, forKey: .itemTypes)
+    }
+
+    init(id: UUID, shortName: String, fullName: String, description: String, requiredLevel: Int, missionMessage: String, baseXPLower: Int, baseXPUpper: Int, baseGoldLower: Int, baseGoldUpper: Int, difficulty: Double, runDurationLower: TimeInterval, runDurationUpper: TimeInterval, itemTypes: [ItemType]) {
+        self.id = id
+        self.shortName = shortName
+        self.fullName = fullName
+        self.description = description
+        self.requiredLevel = requiredLevel
+        self.missionMessage = missionMessage
+        self.baseXPLower = baseXPLower
+        self.baseXPUpper = baseXPUpper
+        self.baseGoldLower = baseGoldLower
+        self.baseGoldUpper = baseGoldUpper
+        self.difficulty = difficulty
+        self.runDurationLower = runDurationLower
+        self.runDurationUpper = runDurationUpper
+        self.itemTypes = itemTypes
     }
 }
-
-enum ItemType {
+enum ItemType: Codable {
     case treasure
 }
 
@@ -433,18 +485,31 @@ class GameData: ObservableObject {
             UserDefaults.standard.set(encoded, forKey: "SavedWizard")
         }
         UserDefaults.standard.set(lastUpdateTime, forKey: "LastUpdateTime")
-    }
+        UserDefaults.standard.set(Array(unlockedViews), forKey: "UnlockedViews")
+         UserDefaults.standard.set(Array(unlockedFeatures), forKey: "UnlockedFeatures")
+        if let encodedRuns = try? encoder.encode(completedRuns) {
+             UserDefaults.standard.set(encodedRuns, forKey: "CompletedRuns")
+         }
+        }
 
     func loadGame() {
-        if let savedWizard = UserDefaults.standard.data(forKey: "SavedWizard") {
-            let decoder = JSONDecoder()
-            if let loadedWizard = try? decoder.decode(Wizard.self, from: savedWizard) {
-                wizard = loadedWizard
-            }
+        let decoder = JSONDecoder()
+        if let savedWizard = UserDefaults.standard.data(forKey: "SavedWizard"),
+           let loadedWizard = try? decoder.decode(Wizard.self, from: savedWizard) {
+            wizard = loadedWizard
         }
         lastUpdateTime = UserDefaults.standard.object(forKey: "LastUpdateTime") as? Date ?? Date()
+        unlockedViews = Set(UserDefaults.standard.array(forKey: "UnlockedViews") as? [String] ?? ["CharacterSheet", "ArcaneLibrary"])
+        unlockedFeatures = Set(UserDefaults.standard.array(forKey: "UnlockedFeatures") as? [String] ?? [])
+        
+        // Decode completedRuns
+        if let savedRuns = UserDefaults.standard.data(forKey: "CompletedRuns"),
+           let loadedRuns = try? decoder.decode([Run].self, from: savedRuns) {
+            completedRuns = loadedRuns
+        } else {
+            completedRuns = []
+        }
     }
-    
     
 }
 
@@ -519,38 +584,116 @@ let availableSpells = [
 
 let allLocations: [Location] = [
     Location(
+        id: UUID(),
         shortName: "Inn Basement",
         fullName: "The Dusty Inn Basement",
         description: "A dimly lit cellar filled with cobwebs and old crates.",
         requiredLevel: 1,
         missionMessage: "Clearing out the cobwebs",
-        baseXP: 10...20,
-        baseGold: 5...15,
+        baseXPLower: 10,
+        baseXPUpper: 20,
+        baseGoldLower: 5,
+        baseGoldUpper: 15,
         difficulty: 0.1,
-        runDuration: 60...120 // 1-2 minutes
+        runDurationLower: 60,
+        runDurationUpper: 120,
+        itemTypes: [.treasure]
     ),
     Location(
+        id: UUID(),
         shortName: "Village",
         fullName: "Willowbrook Village",
         description: "A quaint settlement with friendly faces and simple quests.",
         requiredLevel: 2,
         missionMessage: "Helping the villagers",
-        baseXP: 15...25,
-        baseGold: 10...20,
+        baseXPLower: 15,
+        baseXPUpper: 25,
+        baseGoldLower: 10,
+        baseGoldUpper: 20,
         difficulty: 0.2,
-        runDuration: 120...240 // 2-4 minutes
+        runDurationLower: 120,
+        runDurationUpper: 240,
+        itemTypes: [.treasure]
     ),
-    // ... WIP Add more locations later
     Location(
+        id: UUID(),
+        shortName: "Sewers",
+        fullName: "The Winding Sewers",
+        description: "A maze of dank tunnels beneath the village, home to unsavory creatures.",
+        requiredLevel: 4,
+        missionMessage: "Exploring the murky depths",
+        baseXPLower: 25,
+        baseXPUpper: 40,
+        baseGoldLower: 15,
+        baseGoldUpper: 30,
+        difficulty: 0.3,
+        runDurationLower: 180,
+        runDurationUpper: 300,
+        itemTypes: [.treasure]
+    ),
+    Location(
+        id: UUID(),
+        shortName: "Graveyard",
+        fullName: "Whispering Willows Cemetery",
+        description: "An ancient burial ground where restless spirits roam.",
+        requiredLevel: 6,
+        missionMessage: "Laying spirits to rest",
+        baseXPLower: 35,
+        baseXPUpper: 55,
+        baseGoldLower: 25,
+        baseGoldUpper: 45,
+        difficulty: 0.4,
+        runDurationLower: 240,
+        runDurationUpper: 360,
+        itemTypes: [.treasure]
+    ),
+    Location(
+        id: UUID(),
+        shortName: "Dark Forest",
+        fullName: "The Whispering Woods",
+        description: "A dense, misty forest where ancient magic lingers in the air.",
+        requiredLevel: 8,
+        missionMessage: "Unraveling forest mysteries",
+        baseXPLower: 50,
+        baseXPUpper: 75,
+        baseGoldLower: 35,
+        baseGoldUpper: 60,
+        difficulty: 0.5,
+        runDurationLower: 300,
+        runDurationUpper: 420,
+        itemTypes: [.treasure]
+    ),
+    Location(
+        id: UUID(),
+        shortName: "Abandoned Keep",
+        fullName: "Ironhold Fortress",
+        description: "Once a proud stronghold, now a crumbling ruin teeming with danger.",
+        requiredLevel: 10,
+        missionMessage: "Reclaiming lost treasures",
+        baseXPLower: 70,
+        baseXPUpper: 100,
+        baseGoldLower: 50,
+        baseGoldUpper: 80,
+        difficulty: 0.6,
+        runDurationLower: 360,
+        runDurationUpper: 480,
+        itemTypes: [.treasure]
+    ),
+    Location(
+        id: UUID(),
         shortName: "World's End",
         fullName: "The Edge of Reality",
         description: "The very limits of existence, where reality unravels.",
         requiredLevel: 57,
         missionMessage: "Battling cosmic horrors",
-        baseXP: 500...1000,
-        baseGold: 1000...2000,
+        baseXPLower: 500,
+        baseXPUpper: 1000,
+        baseGoldLower: 1000,
+        baseGoldUpper: 2000,
         difficulty: 0.95,
-        runDuration: 600...900 // 10-15 minutes
+        runDurationLower: 600,
+        runDurationUpper: 900,
+        itemTypes: [.treasure]
     )
 ]
 
@@ -995,6 +1138,9 @@ struct RunView: View {
                 }
             }
         }
+        .sheet(item: $selectedLocation) { location in
+            LocationDetailView(location: location, gameData: gameData)
+        }
     }
 
     var questView: some View {
@@ -1020,29 +1166,14 @@ struct RunView: View {
                     
                     ForEach(sortedLocations) { location in
                         if gameData.isLocationUnlocked(location) {
-                            
                             Button(action: {
-                                   gameData.startRun(location: location)
-                               }) {
-                                   Text(location.shortName)
-                                       .frame(maxWidth: .infinity)
-                                       .padding()
-                               }
-                               .buttonStyle(BorderedButtonStyle(tint: .blue))
-                            
-                            
-//                            Button(action: {
-//                                selectedLocation = location
-//                            }) {
-//                                Text(location.shortName)
-//                                    .frame(maxWidth: .infinity)
-//                                    .padding()
-//                            }
-//                            .buttonStyle(BorderedButtonStyle(tint: .blue))
-//                            
-                            
-                            
-                            
+                                selectedLocation = location
+                            }) {
+                                Text(location.shortName)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                            }
+                            .buttonStyle(BorderedButtonStyle(tint: .blue))
                         } else if location == gameData.nextUnlockedLocation() {
                             Button(action: {
                                 // Show level up message
@@ -1067,9 +1198,6 @@ struct RunView: View {
                 }
             }
             .padding(.vertical)
-        }
-        .sheet(item: $selectedLocation) { location in
-            LocationDetailView(location: location, gameData: gameData)
         }
     }
 }
