@@ -8,6 +8,7 @@ import SwiftUI
 import ClockKit
 import WatchKit
 import Foundation
+import Combine
 
 // MARK: - Data Structures
 
@@ -164,8 +165,8 @@ class GameData: ObservableObject {
     @Published var passiveGoldGained: Int = 0
 //    @Published var showPassiveGainAlert = false
     @Published var currentAlert: (String, String)?
-    @Published private(set) var alertQueue: [CustomAlert] = []
-    @Published var showingAlert = false
+    @Published var alertQueue: [CustomAlert] = []
+    @Published private var showingAlert = false
 
     private var unlockedFeatures: Set<String> = []
     
@@ -615,7 +616,6 @@ extension View {
 }
 
 // MARK: - Views
-
 struct ContentView: View {
     @StateObject private var gameData = GameData()
     @State private var showSplash = true
@@ -725,7 +725,7 @@ struct ContentView: View {
     }
     
 
-    private func endSplash() {
+    func endSplash() {
         withAnimation(.easeOut(duration: 0.3)) {
             splashOpacity = 0
         }
@@ -734,12 +734,11 @@ struct ContentView: View {
         }
     }
 
-    private func updatePassiveGains() {
+    func updatePassiveGains() {
         gameData.updatePassiveGains()
         gameData.checkUnlocks()
     }
 }
-
 
 //enum AlertItem: Identifiable {
 //    case levelUp, passiveGains
@@ -953,16 +952,14 @@ struct PlaceholderView: View {
 
 // MARK: - Run View
 
-
 struct RunView: View {
     @EnvironmentObject var gameData: GameData
     @State private var selectedLocation: Location?
-    @State private var currentTime = Date()
     @State private var showSummary = false
     @State private var lastCompletedRun: Run?
     @State private var didLevelUp = false
     
-    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    @StateObject private var runTimer = RunTimer()
     
     var sortedLocations: [Location] {
         return allLocations.sorted { $0.requiredLevel > $1.requiredLevel }
@@ -981,7 +978,7 @@ struct RunView: View {
                 questView
             }
         }
-        .onChange(of: showSummary) { _, newValue in
+        .onChange(of: showSummary) { oldValue, newValue in
             if !newValue {
                 lastCompletedRun = nil
                 didLevelUp = false
@@ -995,9 +992,6 @@ struct RunView: View {
                 gameData.checkUnlocks() // This will trigger any necessary unlock alerts
             }
         }
-        .onReceive(timer) { _ in
-            self.currentTime = Date()
-        }
     }
 
     var questView: some View {
@@ -1010,8 +1004,11 @@ struct RunView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                     
                     Text("Adventuring: \(currentRun.location.shortName)")
-                    ProgressView(value: min(currentTime.timeIntervalSince(gameData.runStartTime ?? Date()), currentRun.duration), total: currentRun.duration)
-                        .padding(.horizontal)
+                    if let startTime = gameData.runStartTime {
+                        let progress = min(max(0, runTimer.currentTime.timeIntervalSince(startTime)), currentRun.duration)
+                        ProgressView(value: progress, total: currentRun.duration)
+                            .padding(.horizontal)
+                    }
                 } else {
                     Text("Choose Thy Quest")
                         .font(.headline)
@@ -1058,6 +1055,23 @@ struct RunView: View {
         }
     }
 }
+
+class RunTimer: ObservableObject {
+    @Published var currentTime = Date()
+    
+    init() {
+        Timer.publish(every: 1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.currentTime = Date()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private var cancellables = Set<AnyCancellable>()
+}
+
+
 
 
 struct LocationDetailView: View {
