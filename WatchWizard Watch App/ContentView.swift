@@ -798,6 +798,7 @@ struct ContentView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .withTextShadow()
     }
     
     var mainContent: some View {
@@ -1050,32 +1051,30 @@ struct ArcaneLibraryView: View {
     @EnvironmentObject var gameData: GameData
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Arcane Sanctum")
-                .font(.largeTitle)
-                .withTextShadow()
-            
-            Text("Delve into ancient tomes to expand thy knowledge")
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .withTextShadow()
-            
-            Button(action: {
-                gameData.studyArcaneTexts()
-            }) {
-                Text("Study Arcane Texts")
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+            ZStack {
+                BackgroundView(imageName: "library")
+                VStack(spacing: 15) {
+                    Text("Arcane Sanctum")
+                        .withBoldShadow()
+                    
+                    Text("Delve into ancient tomes to expand thy knowledge:")
+                        .withTextShadow()
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(action: {
+                        gameData.studyArcaneTexts()
+                    }) {
+                        Text("Study Arcane Texts")
+                            .padding()
+                            .cornerRadius(10)
+                            .withTextShadow()
+                    }
+                    
+                    Text("XP: \(gameData.wizard.xp)")
+                        .withTextShadow()
+                }
+                .padding()
             }
-            
-            Text("XP: \(gameData.wizard.xp)")
-                .font(.headline)
-                .withTextShadow()
         }
-        .padding()
-    }
 }
 
 // MARK: - Placeholder View
@@ -1121,6 +1120,7 @@ struct RunView: View {
                     showSummary: $showSummary
                 )
             } else {
+                BackgroundView(imageName: "choose")
                 questView
             }
         }
@@ -1157,7 +1157,7 @@ struct RunView: View {
             VStack(spacing: 15) {
                 if let currentRun = gameData.currentRun {
                     Text("\(gameData.wizard.name) is \(currentRun.location.missionMessage)")
-                        .font(.headline)
+                        .withTextShadow()
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .center)
                     
@@ -1169,7 +1169,7 @@ struct RunView: View {
                     }
                 } else {
                     Text("Choose Thy Quest")
-                        .font(.headline)
+                        .withBoldShadow()
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .center)
                     
@@ -1182,7 +1182,8 @@ struct RunView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding()
                             }
-                            .buttonStyle(BorderedButtonStyle(tint: .blue))
+                            .buttonStyle(BorderedButtonStyle(tint: .white))
+                            .withTextShadow()
                         } else if location == gameData.nextUnlockedLocation() {
                             Button(action: {
                                 // Show level up message
@@ -1190,17 +1191,19 @@ struct RunView: View {
                                 Text(location.shortName)
                                     .frame(maxWidth: .infinity)
                                     .padding()
+                                    .withTextShadow()
                             }
                             .buttonStyle(BorderedButtonStyle(tint: .gray))
                             .disabled(true)
                             .overlay(
                                 Text("Level \(location.requiredLevel) to unlock")
-                                    .font(.caption)
+//                                    .font(.caption)
                                     .foregroundColor(.secondary)
-                                    .padding(4)
-                                    .background(Color.black.opacity(0.6))
-                                    .cornerRadius(4)
-                                    .padding(.top, 30)
+                                    .padding(6)
+                                    .background(Color.black.opacity(0.1))
+                                    .cornerRadius(10)
+                                    .padding(.top, 22)
+                                    .withTextShadow()
                             )
                         }
                     }
@@ -1276,17 +1279,17 @@ struct RunSummaryView: View {
         ScrollView {
             VStack(spacing: 20) {
                 Text("\(wizardName) has returned from \(run.location.shortName)")
-                    .font(.headline)
+                    .withTextShadow()
                     .multilineTextAlignment(.center)
 
                 if run.succeeded {
                     Text("Quest Successful!")
                         .foregroundColor(.green)
-                        .font(.title2)
+                        .withBoldShadow()
                 } else {
-                    Text("Forced to Retreat")
+                    Text("Forced to Retreat...")
                         .foregroundColor(.red)
-                        .font(.title2)
+                        .withBoldShadow()
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -1342,54 +1345,61 @@ struct InventoryView: View {
     @State private var showingSellAllConfirmation = false
 
     var body: some View {
-        NavigationView {
-            List {
-                Section {
-                    HStack {
-                        Text("Gold:")
-                        Spacer()
-                        Text("\(gameData.wizard.gold)🟡")
-                            .fontWeight(.bold).foregroundColor(.yellow)
+        ZStack {
+            BackgroundView(imageName: "satchel")
+            NavigationView {
+                List {
+                    Section {
+                        HStack {
+                            Text("Gold:")
+                            Spacer()
+                            Text("\(gameData.wizard.gold)🟡")
+                                .fontWeight(.bold).foregroundColor(.yellow)
+                        }.withTextShadow()
                     }
-                }
-
-                Section(header: Text("Trade")) {
-                    Button("Sell All Items") {
-                        showingSellAllConfirmation = true
+                    
+                    Section(header: Text("Trade")) {
+                        Button("Sell All Items") {
+                            showingSellAllConfirmation = true
+                        }
+                        .withTextShadow()
                     }
-                    .foregroundColor(.blue)
-                }
-
-                Section(header: Text("Sell Items")) {
-                    ForEach(gameData.wizard.inventory, id: \.name) { item in
-                        Button(action: {
-                            selectedItem = item
-                        }) {
-                            HStack {
-                                Text(item.name)
-                                Spacer()
-                                Text("x\(item.quantity)")
+                    
+                        Section(header: Text("Sell Treasures")) {
+                        ForEach(gameData.wizard.inventory, id: \.name) { item in
+                            Button(action: {
+                                selectedItem = item
+                                
+                            }) {
+                                HStack {
+                                    Text(item.name)
+                                    Spacer()
+                                    Text("x\(item.quantity)")
+                                }
+                                .withTextShadow()
                             }
+
+                            
                         }
                     }
+                        .withTextShadow()
                 }
+                .navigationTitle("Adventurer's Satchel")
+                .navigationBarTitleDisplayMode(.inline)
+                .sheet(item: $selectedItem) { item in
+                    SellItemView(item: item, gameData: gameData, isPresented: Binding(
+                        get: { selectedItem != nil },
+                        set: { if !$0 { selectedItem = nil } }
+                    ))
+                    .onAppear {
+                        gameData.consolidateAndSortInventory()}
+                }
+                .alert(isPresented: $showingSellAllConfirmation) {
+                    sellAllConfirmationAlert
+                }
+                
             }
-            .navigationTitle("Adventurer's Satchel")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(item: $selectedItem) { item in
-                SellItemView(item: item, gameData: gameData, isPresented: Binding(
-                    get: { selectedItem != nil },
-                    set: { if !$0 { selectedItem = nil } }
-                ))
-            .onAppear {
-                    gameData.consolidateAndSortInventory()}
-            }
-            .alert(isPresented: $showingSellAllConfirmation) {
-                sellAllConfirmationAlert
-            }
-
         }
-
     }
 
     var sellAllConfirmationAlert: Alert {
@@ -1483,44 +1493,47 @@ struct SpellShopView: View {
     }
 
     var body: some View {
-        NavigationView {
-            List {
-                Section(header: Text("Arcane Exchange")) {
-                    Button("Convert Gold to Arcane Knowledge") {
-                        showingXPConversionView = true
-                    }
-                }
-
-                Section(header: Text("Purchase Spells")) {
-                    ForEach(availableSpellsForPurchase) { spell in
-                        if !gameData.wizard.spells.contains(where: { $0.id == spell.id }) {
-                            Button(action: {
-                                selectedSpell = spell
-                            }) {
-                                HStack {
-                                    Text(spell.name)
-                                    Spacer()
-                                    Text("\(spell.goldCost)🟡")
-                                }
-                            }
+        ZStack {
+            BackgroundView(imageName: "emporium")
+            NavigationView {
+                List {
+                    Section(header: Text("Arcane Exchange")) {
+                        Button("Convert Gold to Arcane Knowledge") {
+                            showingXPConversionView = true
                         }
                     }
                     
-                    if let nextSpell = nextAvailableSpell {
-                        nextSpellButton(for: nextSpell)
+                    Section(header: Text("Purchase Spells")) {
+                        ForEach(availableSpellsForPurchase) { spell in
+                            if !gameData.wizard.spells.contains(where: { $0.id == spell.id }) {
+                                Button(action: {
+                                    selectedSpell = spell
+                                }) {
+                                    HStack {
+                                        Text(spell.name)
+                                        Spacer()
+                                        Text("\(spell.goldCost)🟡")
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if let nextSpell = nextAvailableSpell {
+                            nextSpellButton(for: nextSpell)
+                        }
                     }
                 }
-            }
-            .navigationTitle("Mystic Emporium")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(item: $selectedSpell) { spell in
-                SpellDetailPurchaseView(spell: spell, isPresented: Binding(
-                    get: { selectedSpell != nil },
-                    set: { if !$0 { selectedSpell = nil } }
-                ))
-            }
-            .sheet(isPresented: $showingXPConversionView) {
-                GoldToXPConversionView(isPresented: $showingXPConversionView)
+                .navigationTitle("Mystic Emporium")
+                .navigationBarTitleDisplayMode(.inline)
+                .sheet(item: $selectedSpell) { spell in
+                    SpellDetailPurchaseView(spell: spell, isPresented: Binding(
+                        get: { selectedSpell != nil },
+                        set: { if !$0 { selectedSpell = nil } }
+                    ))
+                }
+                .sheet(isPresented: $showingXPConversionView) {
+                    GoldToXPConversionView(isPresented: $showingXPConversionView)
+                }
             }
         }
     }
