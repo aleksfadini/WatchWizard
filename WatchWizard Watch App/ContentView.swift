@@ -164,14 +164,22 @@ class GameData: ObservableObject {
     @Published var passiveXPGained: Int = 0
     @Published var passiveGoldGained: Int = 0
 //    @Published var showPassiveGainAlert = false
-    @Published var currentAlert: (String, String)?
-    @Published var alertQueue: [CustomAlert] = []
-    @Published private var showingAlert = false
+    @Published private(set) var alertQueue: [CustomAlert] = []
+    @Published private(set) var currentAlert: CustomAlert?
+
+    
 
     private var unlockedFeatures: Set<String> = []
     
     // MARK: GD - Alert System
-        
+    
+    var alertBinding: Binding<CustomAlert?> {
+        Binding(
+            get: { self.currentAlert },
+            set: { _ in self.dismissCurrentAlert() }
+        )
+    }
+    
         struct CustomAlert: Identifiable {
             let id = UUID()
             let title: String
@@ -184,34 +192,30 @@ class GameData: ObservableObject {
         }
         
     func showAlert(_ alert: CustomAlert) {
-         if alert.type == .featureUnlock && unlockedFeatures.contains(alert.title) {
-             return // Don't show feature unlock alert if it has been shown before
-         }
+        if alert.type == .featureUnlock && unlockedFeatures.contains(alert.title) {
+            return // Don't show feature unlock alert if it has been shown before
+        }
 
-         alertQueue.append(alert)
-         if !showingAlert {
-             displayNextAlert()
-         }
+        alertQueue.append(alert)
+        if currentAlert == nil {
+            currentAlert = alertQueue.first
+        }
 
-         if alert.type == .featureUnlock {
-             unlockedFeatures.insert(alert.title)
-         }
-     }
+        if alert.type == .featureUnlock {
+            unlockedFeatures.insert(alert.title)
+        }
+    }
+    
+    func dismissCurrentAlert() {
+        DispatchQueue.main.async {
+            if !self.alertQueue.isEmpty {
+                self.alertQueue.removeFirst()
+            }
+            self.currentAlert = self.alertQueue.first
+        }
+    }
 
-     func displayNextAlert() {
-         if !alertQueue.isEmpty {
-             showingAlert = true
-         } else {
-             showingAlert = false
-         }
-     }
 
-     func dismissCurrentAlert() {
-         if !alertQueue.isEmpty {
-             alertQueue.removeFirst()
-         }
-         displayNextAlert()
-     }
     
     init() {
         self.wizard = Wizard(name: "Merlin", level: 1, xp: 0, gold: 0, spells: [availableSpells[0]], inventory: [])
@@ -279,22 +283,22 @@ class GameData: ObservableObject {
         }
     }
 
+    func studyArcaneTexts() {
+        wizard.xp += 1
+        checkLevelUp()
+        checkUnlocks()
+    }
 
-    
     func startRun(location: Location) {
         leveledUpDuringLastRun = false
-        let duration: TimeInterval
-            if isTestMode {
-                duration = 3 // seconds for testing
-            } else {
-                duration = TimeInterval.random(in: location.runDuration)
-            }
-          runStartTime = Date()
-          currentRun = Run(location: location, duration: duration, xpGained: 0, goldGained: 0, itemsGained: [], creaturesDefeated: [], succeeded: false)
-          DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-              self.completeRun()
-          }
-      }
+        let duration: TimeInterval = isTestMode ? 3 : TimeInterval.random(in: location.runDuration)
+        runStartTime = Date()
+        currentRun = Run(location: location, duration: duration, xpGained: 0, goldGained: 0, itemsGained: [], creaturesDefeated: [], succeeded: false)
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            self.completeRun()
+        }
+    }
+
       
       func completeRun() {
           guard var run = currentRun else { return }
@@ -644,13 +648,12 @@ struct ContentView: View {
             updatePassiveGains()
         }
         .withTextShadow()
-        .alert(item: Binding<GameData.CustomAlert?>(
-            get: { self.gameData.alertQueue.first },
-            set: { _ in self.gameData.dismissCurrentAlert() }
-        )) { alert in
-            Alert(title: Text(alert.title),
-                  message: Text(alert.message),
-                  dismissButton: .default(Text("OK")))
+        .alert(item: gameData.alertBinding) { alert in
+            Alert(
+                title: Text(alert.title),
+                message: Text(alert.message),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
     
@@ -915,9 +918,7 @@ struct ArcaneLibraryView: View {
                 .withTextShadow()
             
             Button(action: {
-                gameData.wizard.xp += 1
-                gameData.checkLevelUp()
-                gameData.checkUnlocks()
+                gameData.studyArcaneTexts()
             }) {
                 Text("Study Arcane Texts")
                     .padding()
@@ -986,10 +987,12 @@ struct RunView: View {
         }
         .onReceive(gameData.$currentRun) { run in
             if run == nil && !gameData.completedRuns.isEmpty {
-                lastCompletedRun = gameData.completedRuns.last
-                didLevelUp = gameData.wizard.level > (lastCompletedRun?.location.requiredLevel ?? 0)
-                showSummary = true
-                gameData.checkUnlocks() // This will trigger any necessary unlock alerts
+                DispatchQueue.main.async {
+                    self.lastCompletedRun = self.gameData.completedRuns.last
+                    self.didLevelUp = self.gameData.wizard.level > (self.lastCompletedRun?.location.requiredLevel ?? 0)
+                    self.showSummary = true
+                    self.gameData.checkUnlocks()
+                }
             }
         }
     }
@@ -1017,14 +1020,29 @@ struct RunView: View {
                     
                     ForEach(sortedLocations) { location in
                         if gameData.isLocationUnlocked(location) {
+                            
                             Button(action: {
-                                selectedLocation = location
-                            }) {
-                                Text(location.shortName)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                            }
-                            .buttonStyle(BorderedButtonStyle(tint: .blue))
+                                   gameData.startRun(location: location)
+                               }) {
+                                   Text(location.shortName)
+                                       .frame(maxWidth: .infinity)
+                                       .padding()
+                               }
+                               .buttonStyle(BorderedButtonStyle(tint: .blue))
+                            
+                            
+//                            Button(action: {
+//                                selectedLocation = location
+//                            }) {
+//                                Text(location.shortName)
+//                                    .frame(maxWidth: .infinity)
+//                                    .padding()
+//                            }
+//                            .buttonStyle(BorderedButtonStyle(tint: .blue))
+//                            
+                            
+                            
+                            
                         } else if location == gameData.nextUnlockedLocation() {
                             Button(action: {
                                 // Show level up message
