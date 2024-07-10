@@ -1861,12 +1861,25 @@ struct Particle: Identifiable {
     var opacity: Double
 }
 
+import SwiftUI
+
 struct ParticleEffect: View {
-    @State private var particles: [Particle] = []
     @Binding var isActive: Bool
-    
+    @State private var particles: [Particle] = []
+    @State private var shockwaveScale: CGFloat = 0.0
+    @State private var shockwaveOpacity: Double = 0.0
+
     var body: some View {
         ZStack {
+            // Shockwave effect
+            RadialGradient(gradient: Gradient(colors: [Color.white.opacity(0.2), Color.clear]),
+                           center: .center,
+                           startRadius: 1,
+                           endRadius: 100)
+                .scaleEffect(shockwaveScale)
+                .opacity(shockwaveOpacity)
+            
+            // Particles
             ForEach(particles) { particle in
                 Circle()
                     .fill(Color.yellow)
@@ -1875,22 +1888,23 @@ struct ParticleEffect: View {
                     .opacity(particle.opacity)
             }
         }
-        .onChange(of: isActive) { newValue in
+        .onChange(of: isActive) { oldValue,newValue in
             if newValue {
                 generateParticles()
+                triggerShockwave()
             }
         }
     }
-    
+
     private func generateParticles() {
-        particles = (0..<20).map { _ in
+        particles = (0..<50).map { _ in /// was <20
             Particle(
                 position: CGPoint(
                     x: CGFloat.random(in: 0...WKInterfaceDevice.current().screenBounds.width),
                     y: CGFloat.random(in: 0...WKInterfaceDevice.current().screenBounds.height)
                 ),
-                size: CGFloat.random(in: 2...6),
-                opacity: Double.random(in: 0.5...1)
+                size: CGFloat.random(in: 1...7), // was 2...6
+                opacity: Double.random(in: 0.1...1)  // was 0.5...1
             )
         }
         
@@ -1911,8 +1925,17 @@ struct ParticleEffect: View {
             self.isActive = false
         }
     }
-}
 
+    private func triggerShockwave() {
+        shockwaveScale = 0.0
+        shockwaveOpacity = 0.7
+        
+        withAnimation(.easeOut(duration: 0.5)) {
+            shockwaveScale = 2.0
+            shockwaveOpacity = 0.0
+        }
+    }
+}
 // MARK: - Preview
 
 struct ContentView_Previews: PreviewProvider {
