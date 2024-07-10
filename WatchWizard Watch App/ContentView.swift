@@ -193,6 +193,10 @@ enum ItemType: Codable {
     case treasure
 }
 
+enum AlertType {
+    case levelUp, gainsUpdate, viewUnlocked
+}
+
 // MARK: - Game Data
 
 class GameData: ObservableObject {
@@ -216,57 +220,40 @@ class GameData: ObservableObject {
     @Published var passiveXPGained: Int = 0
     @Published var passiveGoldGained: Int = 0
 //    @Published var showPassiveGainAlert = false
-    @Published private(set) var alertQueue: [CustomAlert] = []
-    @Published private(set) var currentAlert: CustomAlert?
+//    @Published private(set) var alertQueue: [CustomAlert] = []
+//    @Published private(set) var currentAlert: CustomAlert?
+    @Published private(set) var alertQueue: [(title: String, message: String, type: AlertType)] = []
+    @Published private(set) var currentAlert: (title: String, message: String, type: AlertType)?
+    @Published var hasShownGainsUpdateThisSession: Bool = false
+
 
     
 
     private var unlockedFeatures: Set<String> = []
     
     // MARK: GD - Alert System
+
     
-    var alertBinding: Binding<CustomAlert?> {
-        Binding(
-            get: { self.currentAlert },
-            set: { _ in self.dismissCurrentAlert() }
-        )
+    func showCustomAlert(title: String, message: String, type: AlertType) {
+        alertQueue.append((title: title, message: message, type: type))
+        if currentAlert == nil {
+            presentNextAlert()
+        }
     }
     
-        struct CustomAlert: Identifiable {
-            let id = UUID()
-            let title: String
-            let message: String
-            let type: AlertType
-        }
-
-        enum AlertType {
-            case levelUp, passiveGains, featureUnlock
-        }
-        
-    func showAlert(_ alert: CustomAlert) {
-        if alert.type == .featureUnlock && unlockedFeatures.contains(alert.title) {
-            return // Don't show feature unlock alert if it has been shown before
-        }
-
-        alertQueue.append(alert)
-        if currentAlert == nil {
-            currentAlert = alertQueue.first
-        }
-
-        if alert.type == .featureUnlock {
-            unlockedFeatures.insert(alert.title)
+    func presentNextAlert() {
+        if !alertQueue.isEmpty {
+            currentAlert = alertQueue.removeFirst()
+        } else {
+            currentAlert = nil
         }
     }
     
     func dismissCurrentAlert() {
-        DispatchQueue.main.async {
-            if !self.alertQueue.isEmpty {
-                self.alertQueue.removeFirst()
-            }
-            self.currentAlert = self.alertQueue.first
-        }
+        currentAlert = nil
+        presentNextAlert()
     }
-    
+
     init() {
         self.wizard = Wizard(name: "Merlin", level: 1, xp: 0, gold: 0, spells: [availableSpells[0]], inventory: [])
         self.completedRuns = []
@@ -278,11 +265,24 @@ class GameData: ObservableObject {
     }
 
     func unlockFeature(_ feature: String) {
-        unlockedViews.insert(feature)
-        
-        let (title, message) = getUnlockMessage(for: feature)
-        showAlert(CustomAlert(title: title, message: message, type: .featureUnlock))
-    }
+           if !unlockedViews.contains(feature) {
+               unlockedViews.insert(feature)
+               let (title, message) = getUnlockMessage(for: feature)
+               showCustomAlert(title: title, message: message, type: .viewUnlocked)
+               saveUnlockedFeatures()
+           }
+       }
+       
+       private func saveUnlockedFeatures() {
+           UserDefaults.standard.set(Array(unlockedViews), forKey: "UnlockedViews")
+       }
+       
+       private func loadUnlockedFeatures() {
+           if let savedFeatures = UserDefaults.standard.array(forKey: "UnlockedViews") as? [String] {
+               unlockedViews = Set(savedFeatures)
+           }
+       }
+    
 
     private func getUnlockMessage(for feature: String) -> (String, String) {
         switch feature {
@@ -422,7 +422,11 @@ class GameData: ObservableObject {
         }
         if wizard.level > initialLevel {
             leveledUpDuringLastRun = true
-            showAlert(CustomAlert(title: "Hark! Thou hast ascended!", message: "Thy prowess has grown. Thou art now level \(wizard.level)!", type: .levelUp))
+            showCustomAlert(
+                title: "Hark! Thou hast ascended!",
+                message: "Thy prowess has grown. Thou art now level \(wizard.level)!",
+                type: .levelUp
+            )
             lastLevelUp = wizard.level
         }
         objectWillChange.send()
@@ -466,10 +470,18 @@ class GameData: ObservableObject {
         wizard.gold += passiveGoldGained
         
         lastUpdateTime = now
-        if passiveXPGained > 0 || passiveGoldGained > 0 {
-               showAlert(CustomAlert(title: "Whilst thou rested...", message: "Thy coffers have grown by \(passiveGoldGained)🟡 and thy knowledge by \(passiveXPGained) XP.", type: .passiveGains))
-           }
+    
+        
+        if (passiveXPGained > 0 || passiveGoldGained > 0) && !hasShownGainsUpdateThisSession {
+                showCustomAlert(
+                    title: "Whilst thou rested...",
+                    message: "Thy coffers have grown by \(passiveGoldGained)🟡 and thy knowledge by \(passiveXPGained) XP.",
+                    type: .gainsUpdate
+                )
+                hasShownGainsUpdateThisSession = true
+            }
 
+        
         checkLevelUp()
         saveGame()
     }
@@ -797,19 +809,17 @@ struct ContentView: View {
             } else {
                 mainContent
             }
+            
+            if gameData.currentAlert != nil {
+                CustomAlertView()
+                    .environmentObject(gameData)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: WKExtension.applicationDidBecomeActiveNotification)) { _ in
             updatePassiveGains()
         }
         .withTextShadow()
-        .alert(item: gameData.alertBinding) { alert in
-            Alert(
-                title: Text(alert.title),
-                message: Text(alert.message),
-                dismissButton: .default(Text("OK"))
-            )
-        }
-        .withTextShadow()
+
     }
     
     var mainContent: some View {
@@ -898,10 +908,7 @@ struct ContentView: View {
     }
 }
 
-//enum AlertItem: Identifiable {
-//    case levelUp, passiveGains
-//    var id: Self { self }
-//}
+
 // MARK: Splash
 
 struct SplashView: View {
@@ -1060,6 +1067,7 @@ struct SpellDetailPurchaseView: View {
 // MARK: - Arcane Library View
 struct ArcaneLibraryView: View {
     @EnvironmentObject var gameData: GameData
+    @State private var showParticles = false
 
     var body: some View {
             ZStack {
@@ -1073,6 +1081,8 @@ struct ArcaneLibraryView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Button(action: {
                         gameData.studyArcaneTexts()
+                        WKInterfaceDevice.current().play(.click)  // Add this line
+                        showParticles = true
                     }) {
                         Text("Study Arcane Texts")
                             .padding()
@@ -1084,6 +1094,7 @@ struct ArcaneLibraryView: View {
                         .withTextShadow()
                 }
                 .padding()
+                ParticleEffect(isActive: $showParticles)
             }
         }
 }
@@ -1644,6 +1655,7 @@ struct GoldToXPConversionView: View {
         print("Attempting to convert \(amountToConvert) gold to XP")
         if amountToConvert <= gameData.wizard.gold && amountToConvert <= maxConversion {
             DispatchQueue.global(qos: .userInitiated).async {
+                let initialLevel = self.gameData.wizard.level
                 let newGold = self.gameData.wizard.gold - amountToConvert
                 let newXP = self.gameData.wizard.xp + (amountToConvert * self.conversionRate)
                 print("Converted \(amountToConvert) gold to \(amountToConvert * self.conversionRate) XP")
@@ -1657,24 +1669,24 @@ struct GoldToXPConversionView: View {
                     print("Game saved. New level: \(self.gameData.wizard.level)")
                     self.gameData.objectWillChange.send()
                     self.isPresented = false
-                    // Add this line to trigger a refresh of the main view
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        self.gameData.objectWillChange.send()
-                    }
                     
-//                    // Check if level up occurred and present the alert
-//                    if self.gameData.showLevelUpAlert {
-//                        self.isPresented = false  // Close the conversion view
-//                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-//                            self.gameData.objectWillChange.send()
-//                        }
-//                        // The level up alert will be shown by the main ContentView
+                    // Check for level up and show alert if needed
+                    if self.gameData.wizard.level > initialLevel {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            self.gameData.showCustomAlert(
+                                title: "Level Up!",
+                                message: "You've reached level \(self.gameData.wizard.level)!",
+                                type: .levelUp
+                            )
+                        }
                     }
                 }
             }
         }
     }
-    
+
+                    }
+
 
 
 
@@ -1785,6 +1797,118 @@ class ComplicationController: NSObject, CLKComplicationDataSource {
             handler(template)
         default:
             handler(nil)
+        }
+    }
+}
+
+
+// MARK: Custom Alert
+struct CustomAlertView: View {
+    @EnvironmentObject var gameData: GameData
+    
+    var body: some View {
+        if let customAlert = gameData.currentAlert {
+            ZStack {
+                Image(backgroundImageName(for: customAlert.type))
+                    .resizable()
+                    .scaledToFill()
+                    .edgesIgnoringSafeArea(.all)
+                
+                VStack(spacing: 15) {
+                    Text(customAlert.title)
+                        .withBoldShadow()
+                        .multilineTextAlignment(.center)
+                    // lines below make sure text wrap!
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: WKInterfaceDevice.current().screenBounds.width * 0.8)
+                    
+                    Text(customAlert.message)
+                        .withTextShadow()
+                    
+                    Button("Alright!") {
+                        gameData.dismissCurrentAlert()
+                    }
+                    .withTextShadow()
+                    .buttonStyle(BorderedButtonStyle(tint: .white))
+                }
+                .padding()
+                .background(Color.black.opacity(0))
+                .cornerRadius(10)
+            }
+        }
+    }
+    
+    func backgroundImageName(for alertType: AlertType) -> String {
+        switch alertType {
+        case .levelUp:
+            return "LevelUpBackground"
+        case .gainsUpdate:
+            return "GainsUpdateBackground"
+        case .viewUnlocked:
+            return "ViewUnlockedBackground"
+        }
+    }
+}
+
+
+// MARK: Particle effect
+
+
+struct Particle: Identifiable {
+    let id = UUID()
+    var position: CGPoint
+    var size: CGFloat
+    var opacity: Double
+}
+
+struct ParticleEffect: View {
+    @State private var particles: [Particle] = []
+    @Binding var isActive: Bool
+    
+    var body: some View {
+        ZStack {
+            ForEach(particles) { particle in
+                Circle()
+                    .fill(Color.yellow)
+                    .frame(width: particle.size, height: particle.size)
+                    .position(particle.position)
+                    .opacity(particle.opacity)
+            }
+        }
+        .onChange(of: isActive) { newValue in
+            if newValue {
+                generateParticles()
+            }
+        }
+    }
+    
+    private func generateParticles() {
+        particles = (0..<20).map { _ in
+            Particle(
+                position: CGPoint(
+                    x: CGFloat.random(in: 0...WKInterfaceDevice.current().screenBounds.width),
+                    y: CGFloat.random(in: 0...WKInterfaceDevice.current().screenBounds.height)
+                ),
+                size: CGFloat.random(in: 2...6),
+                opacity: Double.random(in: 0.5...1)
+            )
+        }
+        
+        withAnimation(.easeOut(duration: 0.5)) {
+            particles = particles.map { particle in
+                var newParticle = particle
+                newParticle.position = CGPoint(
+                    x: newParticle.position.x + CGFloat.random(in: -20...20),
+                    y: newParticle.position.y + CGFloat.random(in: -20...20)
+                )
+                newParticle.opacity = 0
+                return newParticle
+            }
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.particles = []
+            self.isActive = false
         }
     }
 }
