@@ -1202,18 +1202,18 @@ struct RunView: View {
                                 Text(location.shortName)
                                     .frame(maxWidth: .infinity)
                                     .padding()
-                                    .withTextShadow()
-                            }
+//                                    .withTextShadow()
+                            }.withTextShadow()
                             .buttonStyle(BorderedButtonStyle(tint: .gray))
                             .disabled(true)
                             .overlay(
                                 Text("Level \(location.requiredLevel) to unlock")
 //                                    .font(.caption)
                                     .foregroundColor(.secondary)
-                                    .padding(6)
+                                    .padding(3)
                                     .background(Color.black.opacity(0.1))
                                     .cornerRadius(10)
-                                    .padding(.top, 22)
+                                    .padding(.top, 30)
                                     .withTextShadow()
                             )
                         }
@@ -1657,6 +1657,10 @@ struct GoldToXPConversionView: View {
                     print("Game saved. New level: \(self.gameData.wizard.level)")
                     self.gameData.objectWillChange.send()
                     self.isPresented = false
+                    // Add this line to trigger a refresh of the main view
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.gameData.objectWillChange.send()
+                    }
                     
 //                    // Check if level up occurred and present the alert
 //                    if self.gameData.showLevelUpAlert {
