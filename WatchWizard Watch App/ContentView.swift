@@ -1812,8 +1812,17 @@ struct CustomAlertView: View {
                 Image(backgroundImageName(for: customAlert.type))
                     .resizable()
                     .scaledToFill()
-                    .edgesIgnoringSafeArea(.all)
+                    .frame(width: WKInterfaceDevice.current().screenBounds.width,
+                           height: WKInterfaceDevice.current().screenBounds.height)
+                    .clipped()
                 
+                RadialGradient(
+                    gradient: Gradient(colors: [.black.opacity(0.3), .black.opacity(1)]),
+                    center: .center,
+                    startRadius: WKInterfaceDevice.current().screenBounds.width * 0.3,
+                    endRadius: WKInterfaceDevice.current().screenBounds.width * 0.7
+                )
+                .blendMode(.multiply)
                 VStack(spacing: 15) {
                     Text(customAlert.title)
                         .withBoldShadow()
