@@ -196,6 +196,13 @@ enum ItemType: Codable {
 enum AlertType {
     case levelUp, gainsUpdate, viewUnlocked, story
 }
+//
+//struct FloatingText: Identifiable {
+//    let id = UUID()
+//    var text: String
+//    var position: CGPoint
+//    var opacity: Double
+//}
 
 // MARK: - Game Data
 
@@ -1083,37 +1090,72 @@ struct SpellDetailPurchaseView: View {
 struct ArcaneLibraryView: View {
     @EnvironmentObject var gameData: GameData
     @State private var showParticles = false
+    @State private var showFloatingText = false
 
     var body: some View {
-            ZStack {
-                BackgroundView(imageName: "library")
-                VStack(spacing: 15) {
-                    Text("Arcane Sanctum")
-                        .withBoldShadow()
-                    
-                    Text("Delve into ancient tomes to expand thy knowledge:")
-                        .withTextShadow()
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("XP: \(gameData.wizard.xp)")
-                        .withBoldShadow()
-                    Button(action: {
-                        gameData.studyArcaneTexts()
-                        WKInterfaceDevice.current().play(.click)  // Add this line
-                        showParticles = true
-                    }) {
-                        Text("Study Arcane Texts")
-                            .padding()
-                            .cornerRadius(10)
-                            .withTextShadow()
+        ZStack {
+            BackgroundView(imageName: "library")
+            VStack(spacing: 15) {
+                Text("Arcane Sanctum")
+                    .withBoldShadow()
+                
+                Text("Delve into ancient tomes to expand thy knowledge:")
+                    .withTextShadow()
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("XP: \(gameData.wizard.xp)")
+                    .withBoldShadow()
+                Button(action: {
+                    studyArcaneTexts()
+                    WKInterfaceDevice.current().play(.click)
+                    showParticles = true
+                    showFloatingText = false // Reset
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        showFloatingText = true
                     }
-                    
-  
+                }) {
+                    Text("Study Arcane Texts")
+                        .padding()
+                        .cornerRadius(10)
+                        .withTextShadow()
                 }
-                .padding()
-                ParticleEffect(isActive: $showParticles)
+            }
+            .padding()
+            
+            ParticleEffect(isActive: $showParticles)
+            
+            if showFloatingText {
+                FloatingTextView(text: "+1 XP")
+                    .position(x: WKInterfaceDevice.current().screenBounds.width / 2,
+                              y: WKInterfaceDevice.current().screenBounds.height / 2)
             }
         }
+    }
+    
+    func studyArcaneTexts() {
+        gameData.studyArcaneTexts()
+    }
 }
+
+struct FloatingTextView: View {
+    let text: String
+    @State private var offset: CGFloat = 0
+    @State private var opacity: Double = 1
+
+    var body: some View {
+        Text(text)
+            .foregroundColor(.yellow)
+            .withBoldShadow()
+            .offset(y: offset)
+            .opacity(opacity)
+            .onAppear {
+                withAnimation(.easeOut(duration: 2)) {
+                    offset = -100
+                    opacity = 0
+                }
+            }
+    }
+}
+
 
 // MARK: - Placeholder View
 
@@ -1899,7 +1941,7 @@ struct ParticleEffect: View {
     var body: some View {
         ZStack {
             // Shockwave effect
-            RadialGradient(gradient: Gradient(colors: [Color.white.opacity(0.2), Color.clear]),
+            RadialGradient(gradient: Gradient(colors: [Color.white.opacity(0.3), Color.clear]),
                            center: .center,
                            startRadius: 1,
                            endRadius: 100)
