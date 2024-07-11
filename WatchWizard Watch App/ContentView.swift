@@ -194,7 +194,7 @@ enum ItemType: Codable {
 }
 
 enum AlertType {
-    case levelUp, gainsUpdate, viewUnlocked
+    case levelUp, gainsUpdate, viewUnlocked, story
 }
 
 // MARK: - Game Data
@@ -225,8 +225,7 @@ class GameData: ObservableObject {
     @Published private(set) var alertQueue: [(title: String, message: String, type: AlertType)] = []
     @Published private(set) var currentAlert: (title: String, message: String, type: AlertType)?
     @Published var hasShownGainsUpdateThisSession: Bool = false
-
-
+    @Published var hasShownWelcomeMessage: Bool = false
     
 
     private var unlockedFeatures: Set<String> = []
@@ -296,6 +295,18 @@ class GameData: ObservableObject {
             return ("Chronicles of thy Deeds!", "The bards have begun to sing of thy exploits. Thy legendary tales are now recorded for posterity.")
         default:
             return ("New Power Awakened!", "A new ability has manifested within thee. Explore and discover its secrets!")
+        }
+    }
+    
+    func showWelcomeMessage() {
+        if !hasShownWelcomeMessage {
+            showCustomAlert(
+                title: "Hark, Wizard \(wizard.name)!",
+                message: "Your magical journey begins! The Arcane Council urges you to study the mystic tomes in the Arcane Sanctum. With each page turned, your powers shall grow.",
+                type: .story
+            )
+            hasShownWelcomeMessage = true
+            saveGame()
         }
     }
  
@@ -496,7 +507,8 @@ class GameData: ObservableObject {
         }
         UserDefaults.standard.set(lastUpdateTime, forKey: "LastUpdateTime")
         UserDefaults.standard.set(Array(unlockedViews), forKey: "UnlockedViews")
-         UserDefaults.standard.set(Array(unlockedFeatures), forKey: "UnlockedFeatures")
+        UserDefaults.standard.set(Array(unlockedFeatures), forKey: "UnlockedFeatures")
+        UserDefaults.standard.set(hasShownWelcomeMessage, forKey: "HasShownWelcomeMessage")
         if let encodedRuns = try? encoder.encode(completedRuns) {
              UserDefaults.standard.set(encodedRuns, forKey: "CompletedRuns")
          }
@@ -511,7 +523,7 @@ class GameData: ObservableObject {
         lastUpdateTime = UserDefaults.standard.object(forKey: "LastUpdateTime") as? Date ?? Date()
         unlockedViews = Set(UserDefaults.standard.array(forKey: "UnlockedViews") as? [String] ?? ["CharacterSheet", "ArcaneLibrary"])
         unlockedFeatures = Set(UserDefaults.standard.array(forKey: "UnlockedFeatures") as? [String] ?? [])
-        
+        hasShownWelcomeMessage = UserDefaults.standard.bool(forKey: "HasShownWelcomeMessage")
         // Decode completedRuns
         if let savedRuns = UserDefaults.standard.data(forKey: "CompletedRuns"),
            let loadedRuns = try? decoder.decode([Run].self, from: savedRuns) {
@@ -889,6 +901,9 @@ struct ContentView: View {
         .onAppear {
             updatePassiveGains()
             gameData.checkUnlocks()
+            if !gameData.hasShownWelcomeMessage {
+                gameData.showWelcomeMessage()
+            }
         }
     }
     
@@ -1079,6 +1094,8 @@ struct ArcaneLibraryView: View {
                     Text("Delve into ancient tomes to expand thy knowledge:")
                         .withTextShadow()
                         .fixedSize(horizontal: false, vertical: true)
+                    Text("XP: \(gameData.wizard.xp)")
+                        .withBoldShadow()
                     Button(action: {
                         gameData.studyArcaneTexts()
                         WKInterfaceDevice.current().play(.click)  // Add this line
@@ -1090,8 +1107,7 @@ struct ArcaneLibraryView: View {
                             .withTextShadow()
                     }
                     
-                    Text("XP: \(gameData.wizard.xp)")
-                        .withTextShadow()
+  
                 }
                 .padding()
                 ParticleEffect(isActive: $showParticles)
@@ -1335,14 +1351,12 @@ struct RunSummaryView: View {
                 if didLevelUp {
                               VStack {
                                   Text("Level Up!")
-                                      .font(.title)
-                                      .foregroundColor(.blue)
+                                      .withBoldShadow()
                                       .padding()
-                                      .background(Color.blue.opacity(0.2))
+                                      .background(Color.white.opacity(0.2))
                                       .cornerRadius(10)
                                   
                                   Text("\(wizardName) has reached level \(gameData.wizard.level)!!")
-                                      .font(.caption)
                                       .foregroundColor(.white)
                                       .padding(.top, 5)
                               }
@@ -1832,6 +1846,8 @@ struct CustomAlertView: View {
                         .frame(maxWidth: WKInterfaceDevice.current().screenBounds.width * 0.8)
                     
                     Text(customAlert.message)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: WKInterfaceDevice.current().screenBounds.width * 0.8)
                         .withTextShadow()
                     
                     Button("Alright!") {
@@ -1855,6 +1871,8 @@ struct CustomAlertView: View {
             return "GainsUpdateBackground"
         case .viewUnlocked:
             return "ViewUnlockedBackground"
+        case .story:
+               return "RandomEventBackground"
         }
     }
 }
