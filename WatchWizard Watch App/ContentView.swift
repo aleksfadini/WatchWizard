@@ -351,10 +351,23 @@ class GameData: ObservableObject {
         }
     }
 
-    func studyArcaneTexts() {
-        wizard.xp += 1
+    // Around line 611
+    func studyArcaneTexts() -> Int {
+        let baseXP = 1
+        var additionalXP = 0
+        
+        if wizard.spells.contains(where: { $0.name == "Arcane Amplification" }) {
+            additionalXP += 100
+        }
+        if wizard.spells.contains(where: { $0.name == "Grand Arcane Mastery" }) {
+            additionalXP += 1000
+        }
+        
+        let totalXPGain = baseXP + additionalXP
+        wizard.xp += totalXPGain
         checkLevelUp()
         checkUnlocks()
+        return totalXPGain
     }
 
     func startRun(location: Location) {
@@ -604,7 +617,27 @@ let availableSpells = [
     Spell(name: "Invisible Hound", description: "This hound is tiny, but will go find treasures for you.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 4, goldCost: 1000, successChanceBonus: 0, goldPerHour: 6),
     Spell(name: "Levitating Shield", description: "This shield follows you and carries loot.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 5, goldCost: 1500, successChanceBonus: 0, goldPerHour: 6),
     Spell(name: "Fireball", description: "Engulf your enemies in flames", effect: "Increases XP gain by 5% for each run", requiredLevel: 6, goldCost: 2500, successChanceBonus: 0.05),
-    Spell(name: "Teleport", description: "Instantly move to a nearby location", effect: "Reduces run duration by 10%", requiredLevel: 7, goldCost: 4000, successChanceBonus: 0),
+    Spell(
+        name: "Arcane Amplification",
+        description: "A powerful spell that amplifies the knowledge gained from arcane texts.",
+        effect: "Increases XP gained from studying arcane texts by 100 times.",
+        requiredLevel: 4,
+        goldCost: 10000,
+        successChanceBonus: 0,
+        xpPerHour: 0,
+        goldPerHour: 0
+    ),
+    Spell(
+        name: "Grand Arcane Mastery",
+        description: "An extraordinary spell that vastly increases the wizard's capacity to absorb arcane knowledge.",
+        effect: "Adds 1000 XP to the base XP gained from studying arcane texts.",
+        requiredLevel: 8,
+        goldCost: 50000,
+        successChanceBonus: 0,
+        xpPerHour: 0,
+        goldPerHour: 0
+    ),
+    Spell(name: "Teleport", description: "Instantly move to a nearby location", effect: "Reduces run duration by 10%", requiredLevel: 8, goldCost: 4000, successChanceBonus: 0),
     Spell(name: "Midas Touch", description: "Turn objects into gold", effect: "Generates 1 gold every 10 minutes", requiredLevel: 9, goldCost: 10000, successChanceBonus: 0, goldPerHour: 6),
     Spell(name: "Time Stop", description: "Briefly freeze time around you", effect: "Doubles XP and gold gain for the next run", requiredLevel: 10, goldCost: 15000, successChanceBonus: 0)
 ]
@@ -1091,6 +1124,7 @@ struct ArcaneLibraryView: View {
     @EnvironmentObject var gameData: GameData
     @State private var showParticles = false
     @State private var showFloatingText = false
+    @State private var lastXPGain: Int = 1
 
     var body: some View {
         ZStack {
@@ -1105,7 +1139,7 @@ struct ArcaneLibraryView: View {
                 Text("XP: \(gameData.wizard.xp)")
                     .withBoldShadow()
                 Button(action: {
-                    studyArcaneTexts()
+                    lastXPGain = gameData.studyArcaneTexts()
                     WKInterfaceDevice.current().play(.click)
                     showParticles = true
                     showFloatingText = false // Reset
@@ -1124,18 +1158,13 @@ struct ArcaneLibraryView: View {
             ParticleEffect(isActive: $showParticles)
             
             if showFloatingText {
-                FloatingTextView(text: "+1 XP")
+                FloatingTextView(text: "+\(lastXPGain) XP")
                     .position(x: WKInterfaceDevice.current().screenBounds.width / 2,
                               y: WKInterfaceDevice.current().screenBounds.height / 2)
             }
         }
     }
-    
-    func studyArcaneTexts() {
-        gameData.studyArcaneTexts()
-    }
 }
-
 struct FloatingTextView: View {
     let text: String
     @State private var offset: CGFloat = 0
