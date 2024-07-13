@@ -215,6 +215,7 @@ class GameData: ObservableObject {
     @Published var unlockedViews: Set<String> = ["CharacterSheet", "ArcaneLibrary"]
     // Script Vars
     @Published var wizard: Wizard
+    @Published var wizardTitle: String = "Uninitiated"
 //    @Published var purchasedSpells: [Spell] = []
 //    @Published var gold: Int = 0
 //    @Published var inventory: [Item]
@@ -342,14 +343,28 @@ class GameData: ObservableObject {
             return 200 // in easyXP mode, only 200 xp per level
         } else {
             let currentLevel = wizard.level
-            if currentLevel <= levelUpXPRequirements.count {
-                return levelUpXPRequirements[currentLevel - 1]
+            if currentLevel < levelUpTitlesAndXP.count {
+                return levelUpTitlesAndXP[currentLevel].xpRequired
             } else {
                 // For levels beyond our defined array, we'll use a formula
-                return Int(Double(levelUpXPRequirements.last!) * pow(1.2, Double(currentLevel - levelUpXPRequirements.count)))
+                return Int(Double(levelUpTitlesAndXP.last!.xpRequired) * pow(1.1, Double(currentLevel - levelUpTitlesAndXP.count)))
             }
         }
     }
+//    func getCurrentTitle() -> String {
+//         let currentXP = wizard.xp
+//         for levelInfo in levelUpTitlesAndXP.reversed() {
+//             if currentXP >= levelInfo.xpRequired {
+//                 return levelInfo.title
+//             }
+//         }
+//         return levelUpTitlesAndXP[0].title // Default to the first title if something goes wrong
+//     }
+    func getCurrentTitle() -> String {
+         let newTitle = levelUpTitlesAndXP[wizard.level].title
+        wizardTitle = newTitle
+        return newTitle
+     }
 
     // Around line 611
     func studyArcaneTexts() -> Int {
@@ -448,14 +463,16 @@ class GameData: ObservableObject {
     
     func checkLevelUp() {
         let initialLevel = wizard.level
-        while wizard.xp >= xpNeededForLevelUp {
-            wizard.level += 1
-        }
+        // Also checks that wizard is below Max level (55)
+        while wizard.level < levelUpTitlesAndXP.count && wizard.xp >= levelUpTitlesAndXP[wizard.level].xpRequired {
+              wizard.level += 1
+          }
         if wizard.level > initialLevel {
             leveledUpDuringLastRun = true
+            let newTitle = getCurrentTitle()
             showCustomAlert(
                 title: "Hark! Thou hast ascended!",
-                message: "Thy prowess has grown. Thou art now level \(wizard.level)!",
+                message: "Thy prowess has grown. Thou art now level \(wizard.level), a \(newTitle)!",
                 type: .levelUp
             )
             lastLevelUp = wizard.level
@@ -551,6 +568,8 @@ class GameData: ObservableObject {
         } else {
             completedRuns = []
         }
+        // load title
+        _ = getCurrentTitle()
     }
     
 }
@@ -596,17 +615,69 @@ let creatures = [
     Monster(name: "Medusa", minLevel: 17)
 ]
 
-let levelUpXPRequirements = [
-    10,    // Level 1 to 2
-    50,   // Level 2 to 3
-    100,   // Level 3 to 4
-    200,  // Level 4 to 5
-    500,  // Level 5 to 6
-    1000,  // Level 6 to 7
-    2500,  // Level 7 to 8
-    5500,  // Level 8 to 9
-    10000, // Level 9 to 10
-    30000  // Level 10 to 11
+struct LevelInfo {
+    let level: Int
+    let title: String
+    let xpRequired: Int
+}
+
+let levelUpTitlesAndXP: [LevelInfo] = [
+    LevelInfo(level: 0, title: "Uninitiated", xpRequired: 0), // Dummy entry
+    LevelInfo(level: 1, title: "Apprentice", xpRequired: 0),
+    LevelInfo(level: 2, title: "Novice", xpRequired: 10),
+    LevelInfo(level: 3, title: "Initiate", xpRequired: 50),
+    LevelInfo(level: 4, title: "Scholar", xpRequired: 100),
+    LevelInfo(level: 5, title: "Adept", xpRequired: 200),
+    LevelInfo(level: 6, title: "Magus", xpRequired: 500),
+    LevelInfo(level: 7, title: "Conjurer", xpRequired: 1_000),
+    LevelInfo(level: 8, title: "Warlock", xpRequired: 2_000),
+    LevelInfo(level: 9, title: "Sorcerer", xpRequired: 3_500),
+    LevelInfo(level: 10, title: "Enchanter", xpRequired: 5_500),
+    LevelInfo(level: 11, title: "Summoner", xpRequired: 8_000),
+    LevelInfo(level: 12, title: "Illusionist", xpRequired: 12_000),
+    LevelInfo(level: 13, title: "Elementalist", xpRequired: 18_000),
+    LevelInfo(level: 14, title: "Thaumaturge", xpRequired: 27_000),
+    LevelInfo(level: 15, title: "Necromancer", xpRequired: 40_000),
+    LevelInfo(level: 16, title: "Diviner", xpRequired: 60_000),
+    LevelInfo(level: 17, title: "Chronomancer", xpRequired: 90_000),
+    LevelInfo(level: 18, title: "Mystic", xpRequired: 135_000),
+    LevelInfo(level: 19, title: "Archmage", xpRequired: 200_000),
+    LevelInfo(level: 20, title: "Spellbinder", xpRequired: 300_000),
+    LevelInfo(level: 21, title: "Loremaster", xpRequired: 450_000),
+    LevelInfo(level: 22, title: "Runeweaver", xpRequired: 675_000),
+    LevelInfo(level: 23, title: "Astral Sage", xpRequired: 1_000_000),
+    LevelInfo(level: 24, title: "Eldritch Knight", xpRequired: 1_500_000),
+    LevelInfo(level: 25, title: "Void Walker", xpRequired: 2_250_000),
+    LevelInfo(level: 26, title: "Starshaper", xpRequired: 3_375_000),
+    LevelInfo(level: 27, title: "Planeswalker", xpRequired: 5_000_000),
+    LevelInfo(level: 28, title: "Reality Bender", xpRequired: 7_500_000),
+    LevelInfo(level: 29, title: "Cosmic Weaver", xpRequired: 11_000_000),
+    LevelInfo(level: 30, title: "Aether Lord", xpRequired: 16_500_000),
+    LevelInfo(level: 31, title: "Time Lord", xpRequired: 25_000_000),
+    LevelInfo(level: 32, title: "Dimension Hopper", xpRequired: 37_500_000),
+    LevelInfo(level: 33, title: "Multiverse Sage", xpRequired: 56_000_000),
+    LevelInfo(level: 34, title: "Infinity Mage", xpRequired: 85_000_000),
+    LevelInfo(level: 35, title: "Omniscient One", xpRequired: 128_000_000),
+    LevelInfo(level: 36, title: "Reality Architect", xpRequired: 192_000_000),
+    LevelInfo(level: 37, title: "Cosmic Puppeteer", xpRequired: 288_000_000),
+    LevelInfo(level: 38, title: "Nexus Master", xpRequired: 432_000_000),
+    LevelInfo(level: 39, title: "Eternity Shaper", xpRequired: 648_000_000),
+    LevelInfo(level: 40, title: "Pandimensional", xpRequired: 972_000_000),
+    LevelInfo(level: 41, title: "Void Emperor", xpRequired: 1_458_000_000),
+    LevelInfo(level: 42, title: "Quantum Overlord", xpRequired: 2_187_000_000),
+    LevelInfo(level: 43, title: "Celestial Arbiter", xpRequired: 3_280_000_000),
+    LevelInfo(level: 44, title: "Cosmic Architect", xpRequired: 4_920_000_000),
+    LevelInfo(level: 45, title: "Omniverse Sage", xpRequired: 7_380_000_000),
+    LevelInfo(level: 46, title: "Reality Tyrant", xpRequired: 8_100_000_000),
+    LevelInfo(level: 47, title: "Existence Weaver", xpRequired: 8_900_000_000),
+    LevelInfo(level: 48, title: "Infinity Sovereign", xpRequired: 9_150_000_000),
+    LevelInfo(level: 49, title: "Cosmic Harmony", xpRequired: 9_375_000_000),
+    LevelInfo(level: 50, title: "Primordial Force", xpRequired: 9_565_000_000),
+    LevelInfo(level: 51, title: "Living Paradox", xpRequired: 9_710_000_000),
+    LevelInfo(level: 52, title: "Entropy Master", xpRequired: 9_805_000_000),
+    LevelInfo(level: 53, title: "Singularity", xpRequired: 9_900_000_000),
+    LevelInfo(level: 54, title: "Cosmic Constant", xpRequired: 9_950_000_000),
+    LevelInfo(level: 55, title: "Beyond Comprehension", xpRequired: 9_999_999)
 ]
 
 let availableSpells = [
@@ -836,6 +907,33 @@ struct CustomNavigationTitleView: View {
     }
 }
 
+struct ExperienceProgressBar: View {
+    var progress: CGFloat
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.2))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 2)
+                    )
+                
+                Rectangle()
+                    .fill(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.9)]), startPoint: .leading, endPoint: .trailing))
+                    .frame(width: min(CGFloat(self.progress) * geometry.size.width, geometry.size.width))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                    )
+            }
+            .cornerRadius(5)
+            .blur(radius: 0.5)
+        }
+    }
+}
+
 
 // MARK: - Views
 struct ContentView: View {
@@ -1003,9 +1101,13 @@ struct WizardView: View {
                 BackgroundView(imageName: "Mirror")
                 
                 ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("\(gameData.wizard.name), \nthe Wizard")
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("\(gameData.wizard.name), \n\(gameData.wizardTitle)")
                         .withBoldShadow()
+                    // Use the renamed progress bar here
+                    ExperienceProgressBar(progress: CGFloat(gameData.wizard.xp) / CGFloat(gameData.xpNeededForLevelUp))
+                        .frame(height: 5) // was 15
+                        .padding(.vertical, 0) //was 5
                     Text("Level: \(gameData.wizard.level)")
                         .withTextShadow()
                     Text("XP: \(gameData.wizard.xp)/\(gameData.xpNeededForLevelUp)")

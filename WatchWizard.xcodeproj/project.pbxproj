@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		550A1D7D2C409B140009AF79 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 550A1D7C2C409B140009AF79 /* Info.plist */; };
 		55805FD82C3856070054DD47 /* WatchWizard Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 55805FD72C3856070054DD47 /* WatchWizard Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		55805FDD2C3856070054DD47 /* WatchWizardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55805FDC2C3856070054DD47 /* WatchWizardApp.swift */; };
 		55805FDF2C3856070054DD47 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55805FDE2C3856070054DD47 /* ContentView.swift */; };
@@ -42,7 +41,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		550A1D7C2C409B140009AF79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		55805FD12C3856070054DD47 /* WatchWizard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WatchWizard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		55805FD72C3856070054DD47 /* WatchWizard Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WatchWizard Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		55805FDC2C3856070054DD47 /* WatchWizardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWizardApp.swift; sourceTree = "<group>"; };
@@ -90,7 +88,6 @@
 				55805FDE2C3856070054DD47 /* ContentView.swift */,
 				55805FE02C3856090054DD47 /* Assets.xcassets */,
 				55805FE22C3856090054DD47 /* Preview Content */,
-				550A1D7C2C409B140009AF79 /* Info.plist */,
 			);
 			path = "WatchWizard Watch App";
 			sourceTree = "<group>";
@@ -198,7 +195,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				550A1D7D2C409B140009AF79 /* Info.plist in Resources */,
 				55805FE42C3856090054DD47 /* Preview Assets.xcassets in Resources */,
 				55DF78FB2C3AC8CD00442D89 /* Lancelot-Regular.ttf in Resources */,
 				55805FE12C3856090054DD47 /* Assets.xcassets in Resources */,
