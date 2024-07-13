@@ -1908,28 +1908,30 @@ struct CustomAlertView: View {
                     endRadius: WKInterfaceDevice.current().screenBounds.width * 0.7
                 )
                 .blendMode(.multiply)
-                VStack(spacing: 15) {
-                    Text(customAlert.title)
-                        .withBoldShadow()
-                        .multilineTextAlignment(.center)
-                    // lines below make sure text wrap!
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: WKInterfaceDevice.current().screenBounds.width * 0.8)
-                    
-                    Text(customAlert.message)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: WKInterfaceDevice.current().screenBounds.width * 0.8)
+                ScrollView {
+                    VStack(spacing: 15) {
+                        Text(customAlert.title)
+                            .withBoldShadow()
+                            .multilineTextAlignment(.center)
+                        // lines below make sure text wrap!
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: WKInterfaceDevice.current().screenBounds.width * 0.8)
+                        
+                        Text(customAlert.message)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: WKInterfaceDevice.current().screenBounds.width * 0.8)
+                            .withTextShadow()
+                        
+                        Button("Alright!") {
+                            gameData.dismissCurrentAlert()
+                        }
                         .withTextShadow()
-                    
-                    Button("Alright!") {
-                        gameData.dismissCurrentAlert()
+                        .buttonStyle(BorderedButtonStyle(tint: .white))
                     }
-                    .withTextShadow()
-                    .buttonStyle(BorderedButtonStyle(tint: .white))
+                    .padding()
+                    .background(Color.black.opacity(0))
+                    .cornerRadius(10)
                 }
-                .padding()
-                .background(Color.black.opacity(0))
-                .cornerRadius(10)
             }
         }
     }
