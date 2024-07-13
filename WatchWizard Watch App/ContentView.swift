@@ -234,6 +234,9 @@ class GameData: ObservableObject {
     @Published private(set) var currentAlert: (title: String, message: String, type: AlertType)?
     @Published var hasShownGainsUpdateThisSession: Bool = false
     @Published var hasShownWelcomeMessage: Bool = false
+    // to handle complications updates along with passiveGainsAlert
+    @Published var pendingPassiveXP: Int = 0
+    @Published var pendingPassiveGold: Int = 0
     
 
     private var unlockedFeatures: Set<String> = []
@@ -477,6 +480,7 @@ class GameData: ObservableObject {
             )
             lastLevelUp = wizard.level
         }
+        updateComplications()
         objectWillChange.send()
     }
     
@@ -507,35 +511,53 @@ class GameData: ObservableObject {
             .first { !isLocationUnlocked($0) }
     }
     
-    func updatePassiveGains() {
+    @MainActor
+    public func updatePassiveGains() async {
         let now = Date()
         let elapsedHours = now.timeIntervalSince(lastUpdateTime) / 3600
         
-        passiveXPGained = Int(wizard.xpPerHour * elapsedHours)
-        passiveGoldGained = Int(wizard.goldPerHour * elapsedHours)
+        let passiveXPGained = Int(wizard.xpPerHour * elapsedHours)
+        let passiveGoldGained = Int(wizard.goldPerHour * elapsedHours)
         
         wizard.xp += passiveXPGained
         wizard.gold += passiveGoldGained
         
-        lastUpdateTime = now
-    
+        pendingPassiveXP += passiveXPGained
+        pendingPassiveGold += passiveGoldGained
         
-        if (passiveXPGained > 0 || passiveGoldGained > 0) && !hasShownGainsUpdateThisSession {
-                showCustomAlert(
-                    title: "Whilst thou rested...",
-                    message: "Thy coffers have grown by \(passiveGoldGained)🟡 and thy knowledge by \(passiveXPGained) XP.",
-                    type: .gainsUpdate
-                )
-                hasShownGainsUpdateThisSession = true
-            }
-
+        lastUpdateTime = now
         
         checkLevelUp()
         saveGame()
+        updateComplications()
+        scheduleNextBackgroundRefresh()
     }
 
+    func showPassiveGainsAlert() {
+        if (pendingPassiveXP > 0 || pendingPassiveGold > 0) && !hasShownGainsUpdateThisSession {
+            showCustomAlert(
+                title: "Whilst thou rested...",
+                message: "Thy coffers have grown by \(pendingPassiveGold)🟡 and thy knowledge by \(pendingPassiveXP) XP.",
+                type: .gainsUpdate
+            )
+            hasShownGainsUpdateThisSession = true
+            pendingPassiveXP = 0
+            pendingPassiveGold = 0
+        }
+    }
+        func scheduleNextBackgroundRefresh() {
+            let earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60) // 15 minutes from now
+            WKExtension.shared().scheduleBackgroundRefresh(withPreferredDate: earliestBeginDate, userInfo: nil) { error in
+                if let error = error {
+                    print("Error scheduling background refresh: \(error.localizedDescription)")
+                }
+            }
+        }
+
+
+
 //
-//  MARK: Save Game
+//  MARK: GD - Save Game
 //
     func saveGame() {
         let encoder = JSONEncoder()
@@ -572,6 +594,19 @@ class GameData: ObservableObject {
         _ = getCurrentTitle()
     }
     
+
+    
+}
+
+// MARK: GD Extensions (Complications)
+
+extension GameData {
+    func updateComplications() {
+        let server = CLKComplicationServer.sharedInstance()
+        for complication in server.activeComplications ?? [] {
+            server.reloadTimeline(for: complication)
+        }
+    }
 }
 
 // MARK: - Game Content
@@ -965,10 +1000,14 @@ struct ContentView: View {
                     .environmentObject(gameData)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: WKExtension.applicationDidBecomeActiveNotification)) { _ in
-            updatePassiveGains()
-        }
         .withTextShadow()
+        .onReceive(NotificationCenter.default.publisher(for: WKExtension.applicationDidBecomeActiveNotification)) { _ in
+            Task {
+                await gameData.updatePassiveGains()
+                gameData.showPassiveGainsAlert()
+            }
+        }
+
 
     }
     
@@ -1037,7 +1076,9 @@ struct ContentView: View {
         .environmentObject(gameData)
         .withTextShadow()
         .onAppear {
-            updatePassiveGains()
+            Task {
+                await gameData.updatePassiveGains()
+            }
             gameData.checkUnlocks()
             if !gameData.hasShownWelcomeMessage {
                 gameData.showWelcomeMessage()
@@ -1055,10 +1096,10 @@ struct ContentView: View {
         }
     }
 
-    func updatePassiveGains() {
-        gameData.updatePassiveGains()
-        gameData.checkUnlocks()
-    }
+//    func async updatePassiveGains() {
+//        gameData.updatePassiveGains()
+//        gameData.checkUnlocks()
+//    }
 }
 
 
@@ -1955,38 +1996,6 @@ struct HistoryView: View {
     }
 }
 
-// MARK: - Complications
-
-class ComplicationController: NSObject, CLKComplicationDataSource {
-    func getCurrentTimelineEntry(for complication: CLKComplication, withHandler handler: @escaping (CLKComplicationTimelineEntry?) -> Void) {
-        let gameData = GameData()
-        let date = Date()
-        
-        switch complication.family {
-        case .modularSmall:
-            let template = CLKComplicationTemplateModularSmallStackText(
-                line1TextProvider: CLKSimpleTextProvider(text: "Lvl \(gameData.wizard.level)"),
-                line2TextProvider: CLKSimpleTextProvider(text: "XP: \(gameData.wizard.xp)")
-            )
-            handler(CLKComplicationTimelineEntry(date: date, complicationTemplate: template))
-        default:
-            handler(nil)
-        }
-    }
-    
-    func getLocalizableSampleTemplate(for complication: CLKComplication, withHandler handler: @escaping (CLKComplicationTemplate?) -> Void) {
-        switch complication.family {
-        case .modularSmall:
-            let template = CLKComplicationTemplateModularSmallStackText(
-                line1TextProvider: CLKSimpleTextProvider(text: "Lvl 5"),
-                line2TextProvider: CLKSimpleTextProvider(text: "XP: 450")
-            )
-            handler(template)
-        default:
-            handler(nil)
-        }
-    }
-}
 
 
 // MARK: Custom Alert
@@ -2138,6 +2147,83 @@ struct ParticleEffect: View {
         }
     }
 }
+
+
+
+
+// MARK: - Complications
+
+class ComplicationController: NSObject, CLKComplicationDataSource {
+    
+    let gameData = GameData()
+    
+    func getCurrentTimelineEntry(for complication: CLKComplication, withHandler handler: @escaping (CLKComplicationTimelineEntry?) -> Void) {
+        let date = Date()
+        
+        switch complication.family {
+        case .modularSmall:
+            let template = CLKComplicationTemplateModularSmallStackText(
+                line1TextProvider: CLKSimpleTextProvider(text: "Lvl \(gameData.wizard.level)"),
+                line2TextProvider: CLKSimpleTextProvider(text: "XP: \(gameData.wizard.xp)")
+            )
+            handler(CLKComplicationTimelineEntry(date: date, complicationTemplate: template))
+            
+        case .circularSmall:
+            let progress = Float(gameData.wizard.xp) / Float(gameData.xpNeededForLevelUp)
+            let template = CLKComplicationTemplateCircularSmallRingText(
+                textProvider: CLKSimpleTextProvider(text: "\(gameData.wizard.level)"),
+                fillFraction: progress,
+                ringStyle: .closed
+            )
+            handler(CLKComplicationTimelineEntry(date: date, complicationTemplate: template))
+            
+        case .modularLarge:
+            let template = CLKComplicationTemplateModularLargeStandardBody(
+                headerTextProvider: CLKSimpleTextProvider(text: "Watch Wizard"),
+                body1TextProvider: CLKSimpleTextProvider(text: "Level \(gameData.wizard.level) - \(gameData.wizardTitle)"),
+                body2TextProvider: CLKSimpleTextProvider(text: "XP: \(gameData.wizard.xp)/\(gameData.xpNeededForLevelUp)")
+            )
+            handler(CLKComplicationTimelineEntry(date: date, complicationTemplate: template))
+            
+        default:
+            handler(nil)
+        }
+    }
+    
+    func getLocalizableSampleTemplate(for complication: CLKComplication, withHandler handler: @escaping (CLKComplicationTemplate?) -> Void) {
+        switch complication.family {
+        case .modularSmall:
+            let template = CLKComplicationTemplateModularSmallStackText(
+                line1TextProvider: CLKSimpleTextProvider(text: "Lvl 5"),
+                line2TextProvider: CLKSimpleTextProvider(text: "XP: 450")
+            )
+            handler(template)
+            
+        case .circularSmall:
+            let template = CLKComplicationTemplateCircularSmallRingText(
+                textProvider: CLKSimpleTextProvider(text: "5"),
+                fillFraction: 0.75,
+                ringStyle: .closed
+            )
+            handler(template)
+            
+        case .modularLarge:
+            let template = CLKComplicationTemplateModularLargeStandardBody(
+                headerTextProvider: CLKSimpleTextProvider(text: "Watch Wizard"),
+                body1TextProvider: CLKSimpleTextProvider(text: "Level 5 - Adept"),
+                body2TextProvider: CLKSimpleTextProvider(text: "XP: 450/500")
+            )
+            handler(template)
+            
+        default:
+            handler(nil)
+        }
+    }
+}
+
+
+
+
 // MARK: - Preview
 
 struct ContentView_Previews: PreviewProvider {
