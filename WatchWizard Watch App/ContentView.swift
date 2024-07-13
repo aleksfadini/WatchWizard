@@ -267,7 +267,7 @@ class GameData: ObservableObject {
         self.lastUpdateTime = Date()
         
         if extraMoney {
-            self.wizard.gold = 100000
+            self.wizard.gold = 1000000
         }
     }
 
@@ -651,33 +651,33 @@ let levelUpTitlesAndXP: [LevelInfo] = [
     LevelInfo(level: 26, title: "Starshaper", xpRequired: 3_375_000),
     LevelInfo(level: 27, title: "Planeswalker", xpRequired: 5_000_000),
     LevelInfo(level: 28, title: "Reality Bender", xpRequired: 7_500_000),
-    LevelInfo(level: 29, title: "Cosmic Weaver", xpRequired: 11_000_000),
-    LevelInfo(level: 30, title: "Aether Lord", xpRequired: 16_500_000),
-    LevelInfo(level: 31, title: "Time Lord", xpRequired: 25_000_000),
-    LevelInfo(level: 32, title: "Dimension Hopper", xpRequired: 37_500_000),
-    LevelInfo(level: 33, title: "Multiverse Sage", xpRequired: 56_000_000),
-    LevelInfo(level: 34, title: "Infinity Mage", xpRequired: 85_000_000),
-    LevelInfo(level: 35, title: "Omniscient One", xpRequired: 128_000_000),
-    LevelInfo(level: 36, title: "Reality Architect", xpRequired: 192_000_000),
-    LevelInfo(level: 37, title: "Cosmic Puppeteer", xpRequired: 288_000_000),
-    LevelInfo(level: 38, title: "Nexus Master", xpRequired: 432_000_000),
-    LevelInfo(level: 39, title: "Eternity Shaper", xpRequired: 648_000_000),
-    LevelInfo(level: 40, title: "Pandimensional", xpRequired: 972_000_000),
-    LevelInfo(level: 41, title: "Void Emperor", xpRequired: 1_458_000_000),
-    LevelInfo(level: 42, title: "Quantum Overlord", xpRequired: 2_187_000_000),
-    LevelInfo(level: 43, title: "Celestial Arbiter", xpRequired: 3_280_000_000),
-    LevelInfo(level: 44, title: "Cosmic Architect", xpRequired: 4_920_000_000),
-    LevelInfo(level: 45, title: "Omniverse Sage", xpRequired: 7_380_000_000),
-    LevelInfo(level: 46, title: "Reality Tyrant", xpRequired: 8_100_000_000),
-    LevelInfo(level: 47, title: "Existence Weaver", xpRequired: 8_900_000_000),
-    LevelInfo(level: 48, title: "Infinity Sovereign", xpRequired: 9_150_000_000),
-    LevelInfo(level: 49, title: "Cosmic Harmony", xpRequired: 9_375_000_000),
-    LevelInfo(level: 50, title: "Primordial Force", xpRequired: 9_565_000_000),
-    LevelInfo(level: 51, title: "Living Paradox", xpRequired: 9_710_000_000),
-    LevelInfo(level: 52, title: "Entropy Master", xpRequired: 9_805_000_000),
-    LevelInfo(level: 53, title: "Singularity", xpRequired: 9_900_000_000),
-    LevelInfo(level: 54, title: "Cosmic Constant", xpRequired: 9_950_000_000),
-    LevelInfo(level: 55, title: "Beyond Comprehension", xpRequired: 9_999_999)
+    LevelInfo(level: 29, title: "Cosmic Weaver", xpRequired: 10_000_000),
+    LevelInfo(level: 30, title: "Aether Lord", xpRequired: 15_000_000),
+    LevelInfo(level: 31, title: "Time Lord", xpRequired: 20_000_000),
+    LevelInfo(level: 32, title: "Dimension Hopper", xpRequired: 25_000_000),
+    LevelInfo(level: 33, title: "Multiverse Sage", xpRequired: 30_000_000),
+    LevelInfo(level: 34, title: "Infinity Mage", xpRequired: 40_000_000),
+    LevelInfo(level: 35, title: "Omniscient One", xpRequired: 50_000_000),
+    LevelInfo(level: 36, title: "Reality Architect", xpRequired: 60_000_000),
+    LevelInfo(level: 37, title: "Cosmic Puppeteer", xpRequired: 70_000_000),
+    LevelInfo(level: 38, title: "Nexus Master", xpRequired: 80_000_000),
+    LevelInfo(level: 39, title: "Eternity Shaper", xpRequired: 90_000_000),
+    LevelInfo(level: 40, title: "Pandimensional", xpRequired: 100_000_000),
+    LevelInfo(level: 41, title: "Void Emperor", xpRequired: 113_000_000),
+    LevelInfo(level: 42, title: "Quantum Overlord", xpRequired: 125_000_000),
+    LevelInfo(level: 43, title: "Celestial Arbiter", xpRequired:145_000_000),
+    LevelInfo(level: 44, title: "Cosmic Architect", xpRequired: 165_000_000),
+    LevelInfo(level: 45, title: "Omniverse Sage", xpRequired: 185_000_000),
+    LevelInfo(level: 46, title: "Reality Tyrant", xpRequired: 305_000_000),
+    LevelInfo(level: 47, title: "Existence Weaver", xpRequired: 325_000_000),
+    LevelInfo(level: 48, title: "Infinity Sovereign", xpRequired: 350_000_000),
+    LevelInfo(level: 49, title: "Cosmic Harmony", xpRequired: 400_000_000),
+    LevelInfo(level: 50, title: "Primordial Force", xpRequired: 450_000_000),
+    LevelInfo(level: 51, title: "Living Paradox", xpRequired: 500_000_000),
+    LevelInfo(level: 52, title: "Entropy Master", xpRequired: 600_000_000),
+    LevelInfo(level: 53, title: "Singularity", xpRequired: 700_000_000),
+    LevelInfo(level: 54, title: "Cosmic Constant", xpRequired: 800_000_000),
+    LevelInfo(level: 55, title: "Beyond Comprehension", xpRequired: 999_999_999)
 ]
 
 let availableSpells = [
