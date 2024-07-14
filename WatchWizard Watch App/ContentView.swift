@@ -9,6 +9,7 @@ import ClockKit
 import WatchKit
 import Foundation
 import Combine
+import UserNotifications
 
 // MARK: - Data Structures
 
@@ -232,7 +233,7 @@ extension Int64 {
 
 class GameData: ObservableObject {
     // Dev Vars
-    @Published var isTestMode: Bool = true
+    @Published var isTestMode: Bool = false
     @Published var easyXP: Bool = false
     @Published var extraMoney: Bool = true
     // Locked Views
@@ -295,6 +296,13 @@ class GameData: ObservableObject {
         
         if extraMoney {
             self.wizard.gold = 1000000
+        }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if granted {
+                print("Notification permission granted")
+            } else {
+                print("Notification permission denied")
+            }
         }
     }
 
@@ -414,9 +422,10 @@ class GameData: ObservableObject {
 
     func startRun(location: Location) {
         leveledUpDuringLastRun = false
-        let duration: TimeInterval = isTestMode ? 3 : TimeInterval.random(in: location.runDuration)
+        let duration: TimeInterval = isTestMode ? 10 : TimeInterval.random(in: location.runDuration)
         runStartTime = Date()
         currentRun = Run(location: location, duration: duration, xpGained: 0, goldGained: 0, itemsGained: [], creaturesDefeated: [], succeeded: false)
+        scheduleRogueEvent(for: location)
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
             self.completeRun()
         }
@@ -618,6 +627,40 @@ class GameData: ObservableObject {
         _ = getCurrentTitle()
     }
     
+    // MARK: GD - Rogue Events
+    @Published var currentRogueEvent: RogueEvent?
+    @Published var showRogueEvent = false
+    
+    private func scheduleRogueEvent(for location: Location) {
+        let minDelay = location.runDurationLower
+        let maxDelay = location.runDurationUpper * 0.7
+        let delay = Double.random(in: minDelay...maxDelay)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() +  delay) {
+            self.triggerRogueEvent()
+        }
+    }
+
+    private func triggerRogueEvent() {
+        guard currentRun != nil else { return }
+        currentRogueEvent = rogueEvents.randomElement()
+        showRogueEvent = true
+
+        // If the app is in the background, send a notification
+        if WKExtension.shared().applicationState == .background {
+            sendRogueEventNotification()
+        }
+    }
+
+    private func sendRogueEventNotification() {
+        guard let event = currentRogueEvent else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Rogue Event!"
+        content.body = event.question
+        content.sound = .default
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
 
     
 }
@@ -748,8 +791,8 @@ let allLocations: [Location] = [
         baseGoldLower: 5,
         baseGoldUpper: 15,
         difficulty: 0.1,
-        runDurationLower: 60,
-        runDurationUpper: 120,
+        runDurationLower: 10,
+        runDurationUpper: 60,
         itemTypes: [.treasure]
     ),
     Location(
@@ -848,6 +891,52 @@ let allLocations: [Location] = [
         runDurationUpper: 900,
         itemTypes: [.treasure]
     )
+]
+
+// Rogue Events
+
+struct RogueEvent: Identifiable {
+    let id = UUID()
+    let question: String
+    let optionA: String
+    let optionB: String
+    let outcomeA: RogueEventOutcome
+    let outcomeB: RogueEventOutcome
+    let outcomeTextA: String
+    let outcomeTextB: String
+}
+
+enum RogueEventOutcome {
+    case addGold(percentage: Double)
+    case subtractGold(percentage: Double)
+    case addXP(percentage: Double)
+    case subtractXP(percentage: Double)
+    case succeedRun
+    case failRun
+    case addXPGeneration(amount: Double)
+    case addGoldGeneration(amount: Double)
+}
+
+let rogueEvents: [RogueEvent] = [
+    RogueEvent(
+        question: "You encounter a mysterious old wizard offering to enhance your magical abilities. Do you...",
+        optionA: "Accept his offer",
+        optionB: "Politely decline",
+        outcomeA: .addXP(percentage: 5),
+        outcomeB: .addGold(percentage: 2),
+        outcomeTextA: "The wizard's spell surges through you, expanding your arcane knowledge!",
+        outcomeTextB: "The wizard nods approvingly at your caution and rewards you with a small pouch of gold."
+    ),
+    RogueEvent(
+        question: "A mischievous imp offers to play a game of chance. Do you...",
+        optionA: "Take the risk",
+        optionB: "Ignore the imp",
+        outcomeA: .subtractGold(percentage: 10),
+        outcomeB: .addXPGeneration(amount: 1),
+        outcomeTextA: "The imp cackles as it vanishes with a portion of your gold!",
+        outcomeTextB: "As you walk away, you feel a strange tingling. Your ability to learn has slightly improved!"
+    ),
+    // Add 8 more events here...
 ]
 
 // MARK: Background Image
@@ -982,6 +1071,10 @@ struct ContentView: View {
             
             if gameData.currentAlert != nil {
                 CustomAlertView()
+                    .environmentObject(gameData)
+            }
+            if gameData.showRogueEvent {
+                RogueEventView()
                     .environmentObject(gameData)
             }
         }
@@ -2047,6 +2140,75 @@ struct CustomAlertView: View {
     }
 }
 
+// MARK: Rogue Events View
+
+struct RogueEventView: View {
+    @EnvironmentObject var gameData: GameData
+    @State private var showOutcome = false
+    @State private var selectedOption: String?
+
+    var body: some View {
+        ZStack {
+            BackgroundView(imageName: "randomEventBackground")
+                .scaledToFill()
+                .frame(width: WKInterfaceDevice.current().screenBounds.width,
+                       height: WKInterfaceDevice.current().screenBounds.height)
+                .clipped()
+            
+            RadialGradient(
+                gradient: Gradient(colors: [.black.opacity(0.3), .black.opacity(1)]),
+                center: .center,
+                startRadius: WKInterfaceDevice.current().screenBounds.width * 0.3,
+                endRadius: WKInterfaceDevice.current().screenBounds.width * 0.7
+            )
+            .blendMode(.multiply)
+            ScrollView {
+                VStack(spacing: 20) {
+                    if let event = gameData.currentRogueEvent {
+                        if !showOutcome {
+                            Text(event.question)
+                                .withTextShadow()
+                                .multilineTextAlignment(.center)
+                            
+                            Button(event.optionA) {
+                                selectedOption = "A"
+                                showOutcome = true
+                                handleOutcome(event.outcomeA)
+                            }
+                            .withTextShadow()
+                            .buttonStyle(BorderedButtonStyle(tint: .blue))
+                            
+                            Button(event.optionB) {
+                                selectedOption = "B"
+                                showOutcome = true
+                                handleOutcome(event.outcomeB)
+                            }
+                            .withTextShadow()
+                            .buttonStyle(BorderedButtonStyle(tint: .green))
+                        } else {
+                            Text(selectedOption == "A" ? event.outcomeTextA : event.outcomeTextB)
+                                .withTextShadow()
+                                .multilineTextAlignment(.center)
+                            
+                            Button("Continue") {
+                                gameData.showRogueEvent = false
+                                gameData.currentRogueEvent = nil
+                            }
+                            .withTextShadow()
+                            .buttonStyle(BorderedButtonStyle(tint: .blue))
+                        }
+                    }
+                }
+                .padding()
+            }
+        }
+    }
+
+    private func handleOutcome(_ outcome: RogueEventOutcome) {
+        // Implement outcome logic here
+        // This will modify gameData based on the outcome
+    }
+}
 
 // MARK: Particle effect
 
