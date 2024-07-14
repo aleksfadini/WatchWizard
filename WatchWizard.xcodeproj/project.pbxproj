@@ -12,6 +12,7 @@
 		55805FDF2C3856070054DD47 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55805FDE2C3856070054DD47 /* ContentView.swift */; };
 		55805FE12C3856090054DD47 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 55805FE02C3856090054DD47 /* Assets.xcassets */; };
 		55805FE42C3856090054DD47 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 55805FE32C3856090054DD47 /* Preview Assets.xcassets */; };
+		55B0433A2C43A2E9007DE94A /* GameContentData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55B043392C43A2E9007DE94A /* GameContentData.swift */; };
 		55DF78FA2C3AC8CD00442D89 /* Lancelot-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 55DF78F92C3AC8CD00442D89 /* Lancelot-Regular.ttf */; };
 		55DF78FB2C3AC8CD00442D89 /* Lancelot-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 55DF78F92C3AC8CD00442D89 /* Lancelot-Regular.ttf */; };
 /* End PBXBuildFile section */
@@ -47,6 +48,7 @@
 		55805FDE2C3856070054DD47 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		55805FE02C3856090054DD47 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		55805FE32C3856090054DD47 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		55B043392C43A2E9007DE94A /* GameContentData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameContentData.swift; sourceTree = "<group>"; };
 		55DF78F92C3AC8CD00442D89 /* Lancelot-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Lancelot-Regular.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -86,6 +88,7 @@
 				55805FDE2C3856070054DD47 /* ContentView.swift */,
 				55805FE02C3856090054DD47 /* Assets.xcassets */,
 				55805FE22C3856090054DD47 /* Preview Content */,
+				55B043392C43A2E9007DE94A /* GameContentData.swift */,
 			);
 			path = "WatchWizard Watch App";
 			sourceTree = "<group>";
@@ -208,6 +211,7 @@
 			files = (
 				55805FDF2C3856070054DD47 /* ContentView.swift in Sources */,
 				55805FDD2C3856070054DD47 /* WatchWizardApp.swift in Sources */,
+				55B0433A2C43A2E9007DE94A /* GameContentData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

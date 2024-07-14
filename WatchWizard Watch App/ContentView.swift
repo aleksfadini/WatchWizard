@@ -134,16 +134,6 @@ struct Run: Codable {
 }
 
 
-struct Monster {
-    let name: String
-    let minLevel: Int
-}
-
-struct Treasure {
-    let name: String
-    let goldValue: Int64
-    let minLevel: Int
-}
 
 struct Location: Identifiable, Equatable, Codable {
     let id: UUID
@@ -644,33 +634,6 @@ extension GameData {
 }
 
 // MARK: - Game Content
-
-let treasureList = [
-    Treasure(name: "Copper Coin", goldValue: Int64(1), minLevel: 1),
-    Treasure(name: "Silver Ring", goldValue: Int64(1), minLevel: 2),
-    // ... (update all other entries)
-]
-
-let creatures = [
-    Monster(name: "Goblin", minLevel: 1),
-    Monster(name: "Orc", minLevel: 2),
-    Monster(name: "Troll", minLevel: 4),
-    Monster(name: "Skeleton", minLevel: 3),
-    Monster(name: "Zombie", minLevel: 5),
-    Monster(name: "Ghost", minLevel: 7),
-    Monster(name: "Vampire", minLevel: 10),
-    Monster(name: "Werewolf", minLevel: 8),
-    Monster(name: "Harpy", minLevel: 6),
-    Monster(name: "Minotaur", minLevel: 12),
-    Monster(name: "Chimera", minLevel: 15),
-    Monster(name: "Dragon", minLevel: 20),
-    Monster(name: "Basilisk", minLevel: 18),
-    Monster(name: "Hydra", minLevel: 22),
-    Monster(name: "Manticore", minLevel: 16),
-    Monster(name: "Griffon", minLevel: 14),
-    Monster(name: "Cyclops", minLevel: 13),
-    Monster(name: "Medusa", minLevel: 17)
-]
 
 struct LevelInfo {
     let level: Int
