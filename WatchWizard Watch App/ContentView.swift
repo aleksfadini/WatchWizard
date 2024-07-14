@@ -205,10 +205,10 @@ struct Location: Identifiable, Equatable, Codable {
         self.description = description
         self.requiredLevel = requiredLevel
         self.missionMessage = missionMessage
-        self.baseXPLower = baseXPLower
-        self.baseXPUpper = baseXPUpper
-        self.baseGoldLower = baseGoldLower
-        self.baseGoldUpper = baseGoldUpper
+        self.baseXPLower = Int64(baseXPLower)
+        self.baseXPUpper = Int64(baseXPUpper)
+        self.baseGoldLower = Int64(baseGoldLower)
+        self.baseGoldUpper = Int64(baseGoldUpper)
         self.difficulty = difficulty
         self.runDurationLower = runDurationLower
         self.runDurationUpper = runDurationUpper
@@ -512,7 +512,7 @@ class GameData: ObservableObject {
                 message: "Thy prowess has grown. Thou art now level \(wizard.level), a \(newTitle)!",
                 type: .levelUp
             )
-            lastLevelUp = wizard.level
+            lastLevelUp = Int64(wizard.level)
         }
         updateComplications()
         objectWillChange.send()
@@ -646,8 +646,8 @@ extension GameData {
 // MARK: - Game Content
 
 let treasureList = [
-    Treasure(name: "Copper Coin", goldValue: 1_Int64, minLevel: 1),
-    Treasure(name: "Silver Ring", goldValue: 5_Int64, minLevel: 2),
+    Treasure(name: "Copper Coin", goldValue: Int64(1), minLevel: 1),
+    Treasure(name: "Silver Ring", goldValue: Int64(1), minLevel: 2),
     // ... (update all other entries)
 ]
 
@@ -739,18 +739,18 @@ let levelUpTitlesAndXP: [LevelInfo] = [
 
 let availableSpells = [
     Spell(name: "Enchanted Dart", description: "A simple but effective spell.", effect: "No additional effects", requiredLevel: 1, goldCost: 0, successChanceBonus: 0),
-    Spell(name: "Magic Missile", description: "You will succeed better with stronger attack.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 1, goldCost: 50_Int64, successChanceBonus: 0.02),
-    Spell(name: "Curse", description: "Powerful chant that distracts your enemies.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 2, goldCost: 150_Int64, successChanceBonus: 0.02),
-    Spell(name: "Summon Familiar", description: "Call forth a magical companion.", effect: "Accumulates 1 XP every 5 minutes, even when not in a run", requiredLevel: 3, goldCost: 400_Int64, successChanceBonus: 0, xpPerHour: 30000),
-    Spell(name: "Invisible Hound", description: "This hound is tiny, but will go find treasures for you.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 4, goldCost: 1000_Int64, successChanceBonus: 0, goldPerHour: 6),
-    Spell(name: "Levitating Shield", description: "This shield follows you and carries loot.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 5, goldCost: 1500_Int64, successChanceBonus: 0, goldPerHour: 6),
-    Spell(name: "Fireball", description: "Engulf your enemies in flames", effect: "Increases XP gain by 5% for each run", requiredLevel: 6, goldCost: 2500_Int64, successChanceBonus: 0.05),
+    Spell(name: "Magic Missile", description: "You will succeed better with stronger attack.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 1, goldCost: Int64(50), successChanceBonus: 0.02),
+    Spell(name: "Curse", description: "Powerful chant that distracts your enemies.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 2, goldCost: Int64(150), successChanceBonus: 0.02),
+    Spell(name: "Summon Familiar", description: "Call forth a magical companion.", effect: "Accumulates 1 XP every 5 minutes, even when not in a run", requiredLevel: 3, goldCost: Int64(400), successChanceBonus: 0, xpPerHour: 30000),
+    Spell(name: "Invisible Hound", description: "This hound is tiny, but will go find treasures for you.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 4, goldCost: Int64(1000), successChanceBonus: 0, goldPerHour: 6),
+    Spell(name: "Levitating Shield", description: "This shield follows you and carries loot.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 5, goldCost: Int64(1500), successChanceBonus: 0, goldPerHour: 6),
+    Spell(name: "Fireball", description: "Engulf your enemies in flames", effect: "Increases XP gain by 5% for each run", requiredLevel: 6, goldCost: Int64(2500), successChanceBonus: 0.05),
     Spell(
         name: "Arcane Amplification",
         description: "A powerful spell that amplifies the knowledge gained from arcane texts.",
         effect: "Increases XP gained from studying arcane texts by 100 times.",
         requiredLevel: 4,
-        goldCost: 10000,
+        goldCost: Int64(10000),
         successChanceBonus: 0,
         xpPerHour: 0,
         goldPerHour: 0
@@ -760,14 +760,14 @@ let availableSpells = [
         description: "An extraordinary spell that vastly increases the wizard's capacity to absorb arcane knowledge.",
         effect: "Adds 1000 XP to the base XP gained from studying arcane texts.",
         requiredLevel: 8,
-        goldCost: 50000,
+        goldCost: Int64(50000),
         successChanceBonus: 0,
         xpPerHour: 0,
         goldPerHour: 0
     ),
-    Spell(name: "Teleport", description: "Instantly move to a nearby location", effect: "Reduces run duration by 10%", requiredLevel: 8, goldCost: 4000, successChanceBonus: 0),
-    Spell(name: "Midas Touch", description: "Turn objects into gold", effect: "Generates 1 gold every 10 minutes", requiredLevel: 9, goldCost: 10000, successChanceBonus: 0, goldPerHour: 6),
-    Spell(name: "Time Stop", description: "Briefly freeze time around you", effect: "Doubles XP and gold gain for the next run", requiredLevel: 10, goldCost: 15000, successChanceBonus: 0)
+    Spell(name: "Teleport", description: "Instantly move to a nearby location", effect: "Reduces run duration by 10%", requiredLevel: 8, goldCost: Int64(4000), successChanceBonus: 0),
+    Spell(name: "Midas Touch", description: "Turn objects into gold", effect: "Generates 1 gold every 10 minutes", requiredLevel: 9, goldCost: Int64(10000), successChanceBonus: 0, goldPerHour: 6),
+    Spell(name: "Time Stop", description: "Briefly freeze time around you", effect: "Doubles XP and gold gain for the next run", requiredLevel: 10, goldCost: Int64(15000), successChanceBonus: 0)
 ]
 
 // Locations
@@ -1681,7 +1681,8 @@ struct InventoryView: View {
 
     var sellAllConfirmationAlert: Alert {
         let totalGold: Int64 = gameData.wizard.inventory.reduce(0) { sum, item in
-            sum + Int64(item.quantity * Int64(treasureList.first(where: { $0.name == item.name })?.goldValue ?? 0))
+            let itemValue = treasureList.first(where: { $0.name == item.name })?.goldValue ?? 0
+            return sum + Int64(item.quantity) * Int64(itemValue)
         }
         return Alert(
             title: Text("Sell All Items?"),
@@ -1696,7 +1697,7 @@ struct InventoryView: View {
     func sellAllItems() {
         for item in gameData.wizard.inventory {
             if let treasure = treasureList.first(where: { $0.name == item.name }) {
-                let goldValue = Int64(item.quantity * treasure.goldValue)
+                let goldValue = Int64(item.quantity) * treasure.goldValue
                 gameData.wizard.gold += goldValue
             }
         }
@@ -1735,7 +1736,7 @@ struct SellItemView: View {
     }
     
     var sellValue: Int64 {
-        item.quantity * (treasureList.first(where: { $0.name == item.name })?.goldValue ?? 0)
+        Int64(item.quantity) * Int64(treasureList.first(where: { $0.name == item.name })?.goldValue ?? 0)
     }
     
     func sellItem() {
