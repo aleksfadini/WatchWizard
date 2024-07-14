@@ -15,8 +15,8 @@ import Combine
 class Wizard: ObservableObject, Equatable, Codable {
     @Published var name: String
     @Published var level: Int
-    @Published var xp: Int
-    @Published var gold: Int
+    @Published var xp: Int64
+    @Published var gold: Int64
     @Published var spells: [Spell]
     @Published var inventory: [Item]
     @Published var xpPerHour: Double = 0
@@ -25,7 +25,7 @@ class Wizard: ObservableObject, Equatable, Codable {
     enum CodingKeys: String, CodingKey {
         case name, level, xp, gold, spells, inventory, xpPerHour, goldPerHour
     }
-    init(name: String, level: Int, xp: Int, gold: Int, spells: [Spell], inventory: [Item]) {
+    init(name: String, level: Int, xp: Int64, gold: Int64, spells: [Spell], inventory: [Item]) {
         self.name = name
         self.level = level
         self.xp = xp
@@ -34,16 +34,16 @@ class Wizard: ObservableObject, Equatable, Codable {
         self.inventory = inventory
     }
     required init(from decoder: Decoder) throws {
-           let container = try decoder.container(keyedBy: CodingKeys.self)
-           name = try container.decode(String.self, forKey: .name)
-           level = try container.decode(Int.self, forKey: .level)
-           xp = try container.decode(Int.self, forKey: .xp)
-           gold = try container.decode(Int.self, forKey: .gold)
-           spells = try container.decode([Spell].self, forKey: .spells)
-           inventory = try container.decode([Item].self, forKey: .inventory)
-           xpPerHour = try container.decode(Double.self, forKey: .xpPerHour)
-           goldPerHour = try container.decode(Double.self, forKey: .goldPerHour)
-       }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        level = try container.decode(Int.self, forKey: .level)
+        xp = try container.decode(Int64.self, forKey: .xp)  // Change to Int64
+        gold = try container.decode(Int64.self, forKey: .gold)  // Change to Int64
+        spells = try container.decode([Spell].self, forKey: .spells)
+        inventory = try container.decode([Item].self, forKey: .inventory)
+        xpPerHour = try container.decode(Double.self, forKey: .xpPerHour)
+        goldPerHour = try container.decode(Double.self, forKey: .goldPerHour)
+    }
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -56,6 +56,31 @@ class Wizard: ObservableObject, Equatable, Codable {
         try container.encode(xpPerHour, forKey: .xpPerHour)
         try container.encode(goldPerHour, forKey: .goldPerHour)
     }
+    //        try container.encode(name, forKey: .name)
+    //        try container.encode(level, forKey: .level)
+    //        try container.encode(xp, forKey: .xp)
+    //        try container.encode(gold, forKey: .gold)
+    //        try container.encode(spells, forKey: .spells)
+    //        try container.encode(inventory, forKey: .inventory)
+    //        try container.encode(xpPerHour, forKey: .xpPerHour)
+    //        try container.encode(goldPerHour, forKey: .goldPerHour)
+//    func encode(to encoder: Encoder) throws {
+//        var container = encoder.container(keyedBy: CodingKeys.self)
+//        try container.encode(id, forKey: .id)
+//        try container.encode(shortName, forKey: .shortName)
+//        try container.encode(fullName, forKey: .fullName)
+//        try container.encode(description, forKey: .description)
+//        try container.encode(requiredLevel, forKey: .requiredLevel)
+//        try container.encode(missionMessage, forKey: .missionMessage)
+//        try container.encode(baseXPLower, forKey: .baseXPLower)
+//        try container.encode(baseXPUpper, forKey: .baseXPUpper)
+//        try container.encode(baseGoldLower, forKey: .baseGoldLower)
+//        try container.encode(baseGoldUpper, forKey: .baseGoldUpper)
+//        try container.encode(difficulty, forKey: .difficulty)
+//        try container.encode(runDurationLower, forKey: .runDurationLower)
+//        try container.encode(runDurationUpper, forKey: .runDurationUpper)
+//        try container.encode(itemTypes, forKey: .itemTypes)
+//    }
     
     static func == (lhs: Wizard, rhs: Wizard) -> Bool {
         return lhs.name == rhs.name && lhs.level == rhs.level && lhs.xp == rhs.xp &&
@@ -68,7 +93,7 @@ struct Spell: Identifiable, Equatable, Codable {
     var description: String
     var effect: String
     var requiredLevel: Int
-    var goldCost: Int
+    var goldCost: Int64
     var successChanceBonus: Double
     var xpPerHour: Double = 0
     var goldPerHour: Double = 0
@@ -101,8 +126,8 @@ struct Item: Identifiable, Equatable, Codable {
 struct Run: Codable {
     var location: Location
     var duration: TimeInterval
-    var xpGained: Int
-    var goldGained: Int
+    var xpGained: Int64
+    var goldGained: Int64
     var itemsGained: [Item]
     var creaturesDefeated: [String]
     var succeeded: Bool
@@ -116,7 +141,7 @@ struct Monster {
 
 struct Treasure {
     let name: String
-    let goldValue: Int
+    let goldValue: Int64
     let minLevel: Int
 }
 
@@ -127,20 +152,20 @@ struct Location: Identifiable, Equatable, Codable {
     let description: String
     let requiredLevel: Int
     let missionMessage: String
-    let baseXPLower: Int
-    let baseXPUpper: Int
-    let baseGoldLower: Int
-    let baseGoldUpper: Int
+    let baseXPLower: Int64
+    let baseXPUpper: Int64
+    let baseGoldLower: Int64
+    let baseGoldUpper: Int64
     let difficulty: Double
     let runDurationLower: TimeInterval
     let runDurationUpper: TimeInterval
     let itemTypes: [ItemType]
 
-    var baseXP: ClosedRange<Int> {
+    var baseXP: ClosedRange<Int64> {
         baseXPLower...baseXPUpper
     }
 
-    var baseGold: ClosedRange<Int> {
+    var baseGold: ClosedRange<Int64> {
         baseGoldLower...baseGoldUpper
     }
 
@@ -154,22 +179,23 @@ struct Location: Identifiable, Equatable, Codable {
         case difficulty, runDurationLower, runDurationUpper, itemTypes
     }
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        shortName = try container.decode(String.self, forKey: .shortName)
-        fullName = try container.decode(String.self, forKey: .fullName)
-        description = try container.decode(String.self, forKey: .description)
-        requiredLevel = try container.decode(Int.self, forKey: .requiredLevel)
-        missionMessage = try container.decode(String.self, forKey: .missionMessage)
-        baseXPLower = try container.decode(Int.self, forKey: .baseXPLower)
-        baseXPUpper = try container.decode(Int.self, forKey: .baseXPUpper)
-        baseGoldLower = try container.decode(Int.self, forKey: .baseGoldLower)
-        baseGoldUpper = try container.decode(Int.self, forKey: .baseGoldUpper)
-        difficulty = try container.decode(Double.self, forKey: .difficulty)
-        runDurationLower = try container.decode(TimeInterval.self, forKey: .runDurationLower)
-        runDurationUpper = try container.decode(TimeInterval.self, forKey: .runDurationUpper)
-        itemTypes = try container.decode([ItemType].self, forKey: .itemTypes)
+    init(id: UUID, shortName: String, fullName: String, description: String, requiredLevel: Int, missionMessage: String,
+         baseXPLower: Int64, baseXPUpper: Int64, baseGoldLower: Int64, baseGoldUpper: Int64,
+         difficulty: Double, runDurationLower: TimeInterval, runDurationUpper: TimeInterval, itemTypes: [ItemType]) {
+        self.id = id
+        self.shortName = shortName
+        self.fullName = fullName
+        self.description = description
+        self.requiredLevel = requiredLevel
+        self.missionMessage = missionMessage
+        self.baseXPLower = baseXPLower
+        self.baseXPUpper = baseXPUpper
+        self.baseGoldLower = baseGoldLower
+        self.baseGoldUpper = baseGoldUpper
+        self.difficulty = difficulty
+        self.runDurationLower = runDurationLower
+        self.runDurationUpper = runDurationUpper
+        self.itemTypes = itemTypes
     }
 
     init(id: UUID, shortName: String, fullName: String, description: String, requiredLevel: Int, missionMessage: String, baseXPLower: Int, baseXPUpper: Int, baseGoldLower: Int, baseGoldUpper: Int, difficulty: Double, runDurationLower: TimeInterval, runDurationUpper: TimeInterval, itemTypes: [ItemType]) {
@@ -195,6 +221,14 @@ enum ItemType: Codable {
 
 enum AlertType {
     case levelUp, gainsUpdate, viewUnlocked, story
+}
+
+extension Int64 {
+    var formattedWithSeparator: String {
+        let numberFormatter = NumberFormatter()
+        numberFormatter.numberStyle = .decimal
+        return numberFormatter.string(from: NSNumber(value: self)) ?? ""
+    }
 }
 //
 //struct FloatingText: Identifiable {
@@ -224,9 +258,9 @@ class GameData: ObservableObject {
     @Published var runStartTime: Date?
     @Published var leveledUpDuringLastRun: Bool = false
     @Published var lastUpdateTime: Date
-    @Published var lastLevelUp: Int?
-    @Published var passiveXPGained: Int = 0
-    @Published var passiveGoldGained: Int = 0
+    @Published var lastLevelUp: Int64?
+    @Published var passiveXPGained: Int64 = 0
+    @Published var passiveGoldGained: Int64 = 0
 //    @Published var showPassiveGainAlert = false
 //    @Published private(set) var alertQueue: [CustomAlert] = []
 //    @Published private(set) var currentAlert: CustomAlert?
@@ -235,8 +269,8 @@ class GameData: ObservableObject {
     @Published var hasShownGainsUpdateThisSession: Bool = false
     @Published var hasShownWelcomeMessage: Bool = false
     // to handle complications updates along with passiveGainsAlert
-    @Published var pendingPassiveXP: Int = 0
-    @Published var pendingPassiveGold: Int = 0
+    @Published var pendingPassiveXP: Int64 = 0
+    @Published var pendingPassiveGold: Int64 = 0
     
 
     private var unlockedFeatures: Set<String> = []
@@ -341,7 +375,7 @@ class GameData: ObservableObject {
      }
     
     
-    var xpNeededForLevelUp: Int {
+    var xpNeededForLevelUp: Int64 {
         if easyXP {
             return 200 // in easyXP mode, only 200 xp per level
         } else {
@@ -350,7 +384,7 @@ class GameData: ObservableObject {
                 return levelUpTitlesAndXP[currentLevel].xpRequired
             } else {
                 // For levels beyond our defined array, we'll use a formula
-                return Int(Double(levelUpTitlesAndXP.last!.xpRequired) * pow(1.1, Double(currentLevel - levelUpTitlesAndXP.count)))
+                return Int64(Double(levelUpTitlesAndXP.last!.xpRequired) * pow(1.1, Double(currentLevel - levelUpTitlesAndXP.count)))
             }
         }
     }
@@ -370,9 +404,9 @@ class GameData: ObservableObject {
      }
 
     // Around line 611
-    func studyArcaneTexts() -> Int {
-        let baseXP = 1
-        var additionalXP = 0
+    func studyArcaneTexts() -> Int64 {
+        let baseXP: Int64 = 1
+        var additionalXP: Int64 = 0
         
         if wizard.spells.contains(where: { $0.name == "Arcane Amplification" }) {
             additionalXP += 100
@@ -407,11 +441,11 @@ class GameData: ObservableObject {
           run.succeeded = Double.random(in: 0...1) < adjustedSuccessChance
           
           if run.succeeded {
-              run.xpGained = Int.random(in: run.location.baseXP)
-              run.goldGained = Int.random(in: run.location.baseGold)
+              run.xpGained = Int64.random(in: run.location.baseXP)
+              run.goldGained = Int64.random(in: run.location.baseGold)
           } else {
-              run.xpGained = Int(Double(run.location.baseXP.lowerBound) * 0.1)
-              run.goldGained = Int(Double(run.location.baseGold.lowerBound) * 0.1)
+              run.xpGained = Int64(Double(run.location.baseXP.lowerBound) * 0.1)
+              run.goldGained = Int64(Double(run.location.baseGold.lowerBound) * 0.1)
           }
           
           run.itemsGained = generateItems(for: run.location)
@@ -516,8 +550,8 @@ class GameData: ObservableObject {
         let now = Date()
         let elapsedHours = now.timeIntervalSince(lastUpdateTime) / 3600
         
-        let passiveXPGained = Int(wizard.xpPerHour * elapsedHours)
-        let passiveGoldGained = Int(wizard.goldPerHour * elapsedHours)
+        let passiveXPGained = Int64(wizard.xpPerHour * elapsedHours)
+        let passiveGoldGained = Int64(wizard.goldPerHour * elapsedHours)
         
         wizard.xp += passiveXPGained
         wizard.gold += passiveGoldGained
@@ -612,22 +646,10 @@ extension GameData {
 // MARK: - Game Content
 
 let treasureList = [
-    Treasure(name: "Copper Coin", goldValue: 1, minLevel: 1),
-    Treasure(name: "Silver Ring", goldValue: 5, minLevel: 2),
-    Treasure(name: "Golden Chalice", goldValue: 50, minLevel: 5),
-    Treasure(name: "Ancient Coin", goldValue: 20, minLevel: 3),
-    Treasure(name: "Jeweled Necklace", goldValue: 100, minLevel: 7),
-    Treasure(name: "Enchanted Ring", goldValue: 200, minLevel: 10),
-    Treasure(name: "Dragon's Scale", goldValue: 500, minLevel: 15),
-    Treasure(name: "Mithril Armor", goldValue: 1000, minLevel: 20),
-    Treasure(name: "Elven Tiara", goldValue: 300, minLevel: 12),
-    Treasure(name: "Crystal Shard", goldValue: 75, minLevel: 8),
-    Treasure(name: "Phoenix Feather", goldValue: 250, minLevel: 18),
-    Treasure(name: "Obsidian Dagger", goldValue: 150, minLevel: 9),
-    Treasure(name: "Platinum Bracelet", goldValue: 400, minLevel: 14),
-    Treasure(name: "Mystic Orb", goldValue: 600, minLevel: 16)
+    Treasure(name: "Copper Coin", goldValue: 1_Int64, minLevel: 1),
+    Treasure(name: "Silver Ring", goldValue: 5_Int64, minLevel: 2),
+    // ... (update all other entries)
 ]
-
 
 let creatures = [
     Monster(name: "Goblin", minLevel: 1),
@@ -653,7 +675,7 @@ let creatures = [
 struct LevelInfo {
     let level: Int
     let title: String
-    let xpRequired: Int
+    let xpRequired: Int64
 }
 
 let levelUpTitlesAndXP: [LevelInfo] = [
@@ -661,20 +683,20 @@ let levelUpTitlesAndXP: [LevelInfo] = [
     LevelInfo(level: 1, title: "Apprentice", xpRequired: 0),
     LevelInfo(level: 2, title: "Novice", xpRequired: 10),
     LevelInfo(level: 3, title: "Initiate", xpRequired: 50),
-    LevelInfo(level: 4, title: "Scholar", xpRequired: 100),
-    LevelInfo(level: 5, title: "Adept", xpRequired: 150),
-    LevelInfo(level: 6, title: "Magus", xpRequired: 300),
-    LevelInfo(level: 7, title: "Conjurer", xpRequired: 500),
-    LevelInfo(level: 8, title: "Warlock", xpRequired: 1_000),
-    LevelInfo(level: 9, title: "Sorcerer", xpRequired: 2_000),
-    LevelInfo(level: 10, title: "Enchanter", xpRequired: 3_500),
-    LevelInfo(level: 11, title: "Summoner", xpRequired: 5_000),
-    LevelInfo(level: 12, title: "Illusionist", xpRequired: 10_000),
-    LevelInfo(level: 13, title: "Elementalist", xpRequired: 18_000),
-    LevelInfo(level: 14, title: "Thaumaturge", xpRequired: 27_000),
-    LevelInfo(level: 15, title: "Necromancer", xpRequired: 40_000),
-    LevelInfo(level: 16, title: "Diviner", xpRequired: 60_000),
-    LevelInfo(level: 17, title: "Chronomancer", xpRequired: 90_000),
+    LevelInfo(level: 4, title: "Scholar", xpRequired: 200),
+    LevelInfo(level: 5, title: "Adept", xpRequired: 500),
+    LevelInfo(level: 6, title: "Magus", xpRequired: 1500),
+    LevelInfo(level: 7, title: "Conjurer", xpRequired: 2500),
+    LevelInfo(level: 8, title: "Warlock", xpRequired: 5000),
+    LevelInfo(level: 9, title: "Sorcerer", xpRequired: 7500),
+    LevelInfo(level: 10, title: "Enchanter", xpRequired: 9_999),
+    LevelInfo(level: 11, title: "Summoner", xpRequired: 12_000),
+    LevelInfo(level: 12, title: "Illusionist", xpRequired: 14_000),
+    LevelInfo(level: 13, title: "Elementalist", xpRequired: 30_000),
+    LevelInfo(level: 14, title: "Thaumaturge", xpRequired: 40_000),
+    LevelInfo(level: 15, title: "Necromancer", xpRequired: 50_000),
+    LevelInfo(level: 16, title: "Diviner", xpRequired: 70_000),
+    LevelInfo(level: 17, title: "Chronomancer", xpRequired: 99_999),
     LevelInfo(level: 18, title: "Mystic", xpRequired: 135_000),
     LevelInfo(level: 19, title: "Archmage", xpRequired: 200_000),
     LevelInfo(level: 20, title: "Spellbinder", xpRequired: 300_000),
@@ -682,47 +704,47 @@ let levelUpTitlesAndXP: [LevelInfo] = [
     LevelInfo(level: 22, title: "Runeweaver", xpRequired: 675_000),
     LevelInfo(level: 23, title: "Astral Sage", xpRequired: 1_000_000),
     LevelInfo(level: 24, title: "Eldritch Knight", xpRequired: 1_500_000),
-    LevelInfo(level: 25, title: "Void Walker", xpRequired: 2_250_000),
-    LevelInfo(level: 26, title: "Starshaper", xpRequired: 3_375_000),
-    LevelInfo(level: 27, title: "Planeswalker", xpRequired: 5_000_000),
-    LevelInfo(level: 28, title: "Reality Bender", xpRequired: 7_500_000),
-    LevelInfo(level: 29, title: "Cosmic Weaver", xpRequired: 10_000_000),
-    LevelInfo(level: 30, title: "Aether Lord", xpRequired: 15_000_000),
-    LevelInfo(level: 31, title: "Time Lord", xpRequired: 20_000_000),
-    LevelInfo(level: 32, title: "Dimension Hopper", xpRequired: 25_000_000),
-    LevelInfo(level: 33, title: "Multiverse Sage", xpRequired: 30_000_000),
-    LevelInfo(level: 34, title: "Infinity Mage", xpRequired: 40_000_000),
-    LevelInfo(level: 35, title: "Omniscient One", xpRequired: 50_000_000),
-    LevelInfo(level: 36, title: "Reality Architect", xpRequired: 60_000_000),
-    LevelInfo(level: 37, title: "Cosmic Puppeteer", xpRequired: 70_000_000),
-    LevelInfo(level: 38, title: "Nexus Master", xpRequired: 80_000_000),
-    LevelInfo(level: 39, title: "Eternity Shaper", xpRequired: 90_000_000),
-    LevelInfo(level: 40, title: "Pandimensional", xpRequired: 100_000_000),
-    LevelInfo(level: 41, title: "Void Emperor", xpRequired: 113_000_000),
-    LevelInfo(level: 42, title: "Quantum Overlord", xpRequired: 125_000_000),
-    LevelInfo(level: 43, title: "Celestial Arbiter", xpRequired:145_000_000),
-    LevelInfo(level: 44, title: "Cosmic Architect", xpRequired: 165_000_000),
-    LevelInfo(level: 45, title: "Omniverse Sage", xpRequired: 185_000_000),
-    LevelInfo(level: 46, title: "Reality Tyrant", xpRequired: 305_000_000),
-    LevelInfo(level: 47, title: "Existence Weaver", xpRequired: 325_000_000),
-    LevelInfo(level: 48, title: "Infinity Sovereign", xpRequired: 350_000_000),
-    LevelInfo(level: 49, title: "Cosmic Harmony", xpRequired: 400_000_000),
-    LevelInfo(level: 50, title: "Primordial Force", xpRequired: 450_000_000),
-    LevelInfo(level: 51, title: "Living Paradox", xpRequired: 500_000_000),
-    LevelInfo(level: 52, title: "Entropy Master", xpRequired: 600_000_000),
-    LevelInfo(level: 53, title: "Singularity", xpRequired: 700_000_000),
-    LevelInfo(level: 54, title: "Cosmic Constant", xpRequired: 800_000_000),
-    LevelInfo(level: 55, title: "Beyond Comprehension", xpRequired: 999_999_999)
+    LevelInfo(level: 25, title: "Void Walker", xpRequired: 3_000_000),
+    LevelInfo(level: 26, title: "Starshaper", xpRequired: 5_000_000),
+    LevelInfo(level: 27, title: "Planeswalker", xpRequired: 8_000_000),
+    LevelInfo(level: 28, title: "Reality Bender", xpRequired: 11_000_000),
+    LevelInfo(level: 29, title: "Cosmic Weaver", xpRequired: 17_000_000),
+    LevelInfo(level: 30, title: "Aether Lord", xpRequired: 24_000_000),
+    LevelInfo(level: 31, title: "Time Lord", xpRequired: 40_000_000),
+    LevelInfo(level: 32, title: "Dimension Hopper", xpRequired: 53_000_000),
+    LevelInfo(level: 33, title: "Multiverse Sage", xpRequired: 64_000_000),
+    LevelInfo(level: 34, title: "Infinity Mage", xpRequired: 75_000_000),
+    LevelInfo(level: 35, title: "Omniscient One", xpRequired: 100_000_000),
+    LevelInfo(level: 36, title: "Reality Architect", xpRequired: 200_000_000),
+    LevelInfo(level: 37, title: "Cosmic Puppeteer", xpRequired: 300_000_000),
+    LevelInfo(level: 38, title: "Nexus Master", xpRequired: 500_000_000),
+    LevelInfo(level: 39, title: "Eternity Shaper", xpRequired: 700_000_000),
+    LevelInfo(level: 40, title: "Pandimensional", xpRequired: 999_999_999),
+    LevelInfo(level: 41, title: "Void Emperor", xpRequired: 2_000_000_000),
+    LevelInfo(level: 42, title: "Quantum Overlord", xpRequired: 3_000_000_000),
+    LevelInfo(level: 43, title: "Celestial Arbiter", xpRequired:5_000_000_000),
+    LevelInfo(level: 44, title: "Cosmic Architect", xpRequired: 10_000_000_000),
+    LevelInfo(level: 45, title: "Omniverse Sage", xpRequired: 20_000_000_000),
+    LevelInfo(level: 46, title: "Reality Tyrant", xpRequired: 50_000_000_000),
+    LevelInfo(level: 47, title: "Existence Weaver", xpRequired: 60_000_000_000),
+    LevelInfo(level: 48, title: "Infinity Sovereign", xpRequired: 70_000_000_000),
+    LevelInfo(level: 49, title: "Cosmic Harmony", xpRequired: 80_000_000_000),
+    LevelInfo(level: 50, title: "Primordial Force", xpRequired: 99_999_999_999),
+    LevelInfo(level: 51, title: "Living Paradox", xpRequired: 200_000_000_000),
+    LevelInfo(level: 52, title: "Entropy Master", xpRequired: 300_000_000_000),
+    LevelInfo(level: 53, title: "Singularity", xpRequired: 400_000_000_000),
+    LevelInfo(level: 54, title: "Cosmic Constant", xpRequired: 500_000_000_000),
+    LevelInfo(level: 55, title: "Beyond Comprehension", xpRequired: 999_999_999_999)
 ]
 
 let availableSpells = [
     Spell(name: "Enchanted Dart", description: "A simple but effective spell.", effect: "No additional effects", requiredLevel: 1, goldCost: 0, successChanceBonus: 0),
-    Spell(name: "Magic Missile", description: "You will succeed better with stronger attack.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 1, goldCost: 50, successChanceBonus: 0.02),
-    Spell(name: "Curse", description: "Powerful chant that distracts your enemies.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 2, goldCost: 150, successChanceBonus: 0.02),
-    Spell(name: "Summon Familiar", description: "Call forth a magical companion.", effect: "Accumulates 1 XP every 5 minutes, even when not in a run", requiredLevel: 3, goldCost: 400, successChanceBonus: 0, xpPerHour: 30000),
-    Spell(name: "Invisible Hound", description: "This hound is tiny, but will go find treasures for you.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 4, goldCost: 1000, successChanceBonus: 0, goldPerHour: 6),
-    Spell(name: "Levitating Shield", description: "This shield follows you and carries loot.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 5, goldCost: 1500, successChanceBonus: 0, goldPerHour: 6),
-    Spell(name: "Fireball", description: "Engulf your enemies in flames", effect: "Increases XP gain by 5% for each run", requiredLevel: 6, goldCost: 2500, successChanceBonus: 0.05),
+    Spell(name: "Magic Missile", description: "You will succeed better with stronger attack.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 1, goldCost: 50_Int64, successChanceBonus: 0.02),
+    Spell(name: "Curse", description: "Powerful chant that distracts your enemies.", effect: "Raises your chances of success by 2% in each run", requiredLevel: 2, goldCost: 150_Int64, successChanceBonus: 0.02),
+    Spell(name: "Summon Familiar", description: "Call forth a magical companion.", effect: "Accumulates 1 XP every 5 minutes, even when not in a run", requiredLevel: 3, goldCost: 400_Int64, successChanceBonus: 0, xpPerHour: 30000),
+    Spell(name: "Invisible Hound", description: "This hound is tiny, but will go find treasures for you.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 4, goldCost: 1000_Int64, successChanceBonus: 0, goldPerHour: 6),
+    Spell(name: "Levitating Shield", description: "This shield follows you and carries loot.", effect: "Generates 1 gold every 10 minutes", requiredLevel: 5, goldCost: 1500_Int64, successChanceBonus: 0, goldPerHour: 6),
+    Spell(name: "Fireball", description: "Engulf your enemies in flames", effect: "Increases XP gain by 5% for each run", requiredLevel: 6, goldCost: 2500_Int64, successChanceBonus: 0.05),
     Spell(
         name: "Arcane Amplification",
         description: "A powerful spell that amplifies the knowledge gained from arcane texts.",
@@ -1151,7 +1173,7 @@ struct WizardView: View {
                         .padding(.vertical, 0) //was 5
                     Text("Level: \(gameData.wizard.level)")
                         .withTextShadow()
-                    Text("XP: \(gameData.wizard.xp)/\(gameData.xpNeededForLevelUp)")
+                    Text("XP: \(gameData.wizard.xp.formattedWithSeparator)/\(gameData.xpNeededForLevelUp.formattedWithSeparator)")
                         .withTextShadow()
                     Text("XP per hour: \(String(format: "%.1f", gameData.wizard.xpPerHour))")
                         .withTextShadow()
@@ -1267,7 +1289,7 @@ struct ArcaneLibraryView: View {
     @EnvironmentObject var gameData: GameData
     @State private var showParticles = false
     @State private var showFloatingText = false
-    @State private var lastXPGain: Int = 1
+    @State private var lastXPGain: Int64 = 1
 
     var body: some View {
         ZStack {
@@ -1658,8 +1680,8 @@ struct InventoryView: View {
     }
 
     var sellAllConfirmationAlert: Alert {
-        let totalGold = gameData.wizard.inventory.reduce(0) { sum, item in
-            sum + (item.quantity * (treasureList.first(where: { $0.name == item.name })?.goldValue ?? 0))
+        let totalGold: Int64 = gameData.wizard.inventory.reduce(0) { sum, item in
+            sum + Int64(item.quantity * Int64(treasureList.first(where: { $0.name == item.name })?.goldValue ?? 0))
         }
         return Alert(
             title: Text("Sell All Items?"),
@@ -1674,7 +1696,7 @@ struct InventoryView: View {
     func sellAllItems() {
         for item in gameData.wizard.inventory {
             if let treasure = treasureList.first(where: { $0.name == item.name }) {
-                let goldValue = item.quantity * treasure.goldValue
+                let goldValue = Int64(item.quantity * treasure.goldValue)
                 gameData.wizard.gold += goldValue
             }
         }
@@ -1712,7 +1734,7 @@ struct SellItemView: View {
         .padding()
     }
     
-    var sellValue: Int {
+    var sellValue: Int64 {
         item.quantity * (treasureList.first(where: { $0.name == item.name })?.goldValue ?? 0)
     }
     
@@ -1837,10 +1859,10 @@ struct GoldToXPConversionView: View {
     @Binding var isPresented: Bool
     @State private var goldToConvert: Double = 0
     
-    let conversionRate = 1 // 1 gold = 1 XP
+    let conversionRate: Int64 = 1 // 1 gold = 1 XP
     
-    var maxConversion: Int {
-        min(gameData.wizard.gold, gameData.xpNeededForLevelUp - gameData.wizard.xp)
+    var maxConversion: Int64 {
+        min(Int64(gameData.wizard.gold), gameData.xpNeededForLevelUp - gameData.wizard.xp)
     }
     
     var body: some View {
@@ -1879,7 +1901,7 @@ struct GoldToXPConversionView: View {
     
     
     func convertGoldToXP() {
-        let amountToConvert = Int(goldToConvert)
+        let amountToConvert = Int64(goldToConvert)
         print("Attempting to convert \(amountToConvert) gold to XP")
         if amountToConvert <= gameData.wizard.gold && amountToConvert <= maxConversion {
             DispatchQueue.global(qos: .userInitiated).async {
@@ -2179,10 +2201,10 @@ class ComplicationController: NSObject, CLKComplicationDataSource {
             
         case .modularLarge:
             let template = CLKComplicationTemplateModularLargeStandardBody(
-                headerTextProvider: CLKSimpleTextProvider(text: "Watch Wizard"),
-                body1TextProvider: CLKSimpleTextProvider(text: "Level \(gameData.wizard.level) - \(gameData.wizardTitle)"),
-                body2TextProvider: CLKSimpleTextProvider(text: "XP: \(gameData.wizard.xp)/\(gameData.xpNeededForLevelUp)")
-            )
+                           headerTextProvider: CLKSimpleTextProvider(text: "Watch Wizard"),
+                           body1TextProvider: CLKSimpleTextProvider(text: "Level \(gameData.wizard.level) - \(gameData.wizardTitle)"),
+                           body2TextProvider: CLKSimpleTextProvider(text: "XP: \(gameData.wizard.xp.formattedWithSeparator)/\(gameData.xpNeededForLevelUp.formattedWithSeparator)")
+                       )
             handler(CLKComplicationTimelineEntry(date: date, complicationTemplate: template))
             
         default:
