@@ -132,10 +132,10 @@ let treasureList = [
 
 
 // MARK: Creatures
-//struct creatures {
-//    let name: String
-//    let minLevel: Int
-//}
+struct Monster {
+    let name: String
+    let minLevel: Int
+}
 
 let creatures = [
     Monster(name: "Rat", minLevel: 1),
