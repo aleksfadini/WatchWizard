@@ -6,7 +6,8 @@
 //
 
 import SwiftUI
-//import WatchKit
+import WatchKit
+import ClockKit
 
 @main
 struct WatchWizardApp: App {
@@ -27,6 +28,13 @@ struct WatchWizardApp: App {
                         }
                     }
                 }
+        }
+    }
+    
+    
+    class ExtensionDelegate: NSObject, WKExtensionDelegate {
+        func applicationDidFinishLaunching() {
+            CLKComplicationServer.sharedInstance().reloadComplicationDescriptors()
         }
     }
 }

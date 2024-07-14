@@ -48,7 +48,6 @@
 		55805FE02C3856090054DD47 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		55805FE32C3856090054DD47 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		55DF78F92C3AC8CD00442D89 /* Lancelot-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Lancelot-Regular.ttf"; sourceTree = "<group>"; };
-		55DF78FE2C3ACDF800442D89 /* WatchWizard-Watch-App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "WatchWizard-Watch-App-Info.plist"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,7 +82,6 @@
 		55805FDB2C3856070054DD47 /* WatchWizard Watch App */ = {
 			isa = PBXGroup;
 			children = (
-				55DF78FE2C3ACDF800442D89 /* WatchWizard-Watch-App-Info.plist */,
 				55805FDC2C3856070054DD47 /* WatchWizardApp.swift */,
 				55805FDE2C3856070054DD47 /* ContentView.swift */,
 				55805FE02C3856090054DD47 /* Assets.xcassets */,
@@ -353,8 +351,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "WatchWizard-Watch-App-Info.plist";
+				"INFOPLIST_FILE[sdk=*]" = "WatchWizard-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Watch Wizard - RPG";
-				INFOPLIST_KEY_CLKComplicationPrincipalClass = "$(PRODUCT_MODULE_NAME).ComplicationController";
+				INFOPLIST_KEY_CLKComplicationPrincipalClass = WatchWizard_Watch_App.ComplicationController;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKWatchOnly = YES;
@@ -387,8 +386,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "WatchWizard-Watch-App-Info.plist";
+				"INFOPLIST_FILE[sdk=*]" = "WatchWizard-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Watch Wizard - RPG";
-				INFOPLIST_KEY_CLKComplicationPrincipalClass = "$(PRODUCT_MODULE_NAME).ComplicationController";
+				INFOPLIST_KEY_CLKComplicationPrincipalClass = WatchWizard_Watch_App.ComplicationController;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKWatchOnly = YES;
@@ -416,6 +416,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = N927P4424U;
+				"INFOPLIST_FILE[sdk=*]" = "";
 				INFOPLIST_KEY_CFBundleDisplayName = WatchWizard;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.PixelPortalz.WatchWizard.WatchWizard;
@@ -432,6 +433,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = N927P4424U;
+				"INFOPLIST_FILE[sdk=*]" = "";
 				INFOPLIST_KEY_CFBundleDisplayName = WatchWizard;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.PixelPortalz.WatchWizard.WatchWizard;
